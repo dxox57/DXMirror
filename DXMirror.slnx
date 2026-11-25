@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DXMirror.Core/DXMirror.Core.csproj" />
+    <Project Path="src/DXMirror.App/DXMirror.App.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DXMirror.Core.Tests/DXMirror.Core.Tests.csproj" />
+  </Folder>
+</Solution>

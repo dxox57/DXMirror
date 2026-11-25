@@ -1,0 +1,4 @@
+UxPlay source: https://github.com/FDH2/UxPlay.git commit fbd040e70e754e01fa7e6df810fecd08b6484ada
+DXMirror changes to UxPlay: third_party/uxplay/dxmirror-uxplay.patch (GPL-3.0)
+All other components are unmodified MSYS2 UCRT64 packages (see msys2-package-versions.txt);
+their sources are available from https://github.com/msys2/MINGW-packages and the upstream projects.

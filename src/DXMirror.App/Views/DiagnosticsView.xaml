@@ -1,0 +1,95 @@
+<UserControl x:Class="DXMirror.App.Views.DiagnosticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="32,24,32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,16">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding RefreshDiagnosticsCommand}" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72C;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.Refresh}" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource Button.Primary}" Command="{Binding ExportDiagnosticsCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE896;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.ExportReport}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <TextBlock Text="{DynamicResource S.Nav.Diagnostics}" Style="{StaticResource Text.Title}" />
+        </DockPanel>
+
+        <UniformGrid Grid.Row="1" Rows="1" Margin="-6,0,-6,12">
+            <Border Style="{StaticResource Card}" Margin="6,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.Card.Resources}" Style="{StaticResource Text.CardTitle}" />
+                    <TextBlock Text="{Binding Metrics}" Style="{StaticResource Text.Body}" FontSize="13" LineHeight="22" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="6,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.Card.NetworkDiag}" Style="{StaticResource Text.CardTitle}" />
+                    <TextBlock Style="{StaticResource Text.Body}" FontSize="13">
+                        <Run Text="{DynamicResource S.Field.Firewall}" />: <Run Text="{Binding FirewallText, Mode=OneWay}" FontWeight="SemiBold" />
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource Text.Body}" FontSize="13" Margin="0,6,0,0">
+                        <Run Text="{DynamicResource S.Field.NetProfile}" />: <Run Text="{Binding NetworkProfileText, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding DiscoveryWarning}" Style="{StaticResource Text.Body}" FontSize="13" Margin="0,8,0,0"
+                               Foreground="{DynamicResource Brush.Warning}" Visibility="{Binding ShowDiscoveryWarning, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{DynamicResource S.Hint.NetworkDiag}" Style="{StaticResource Text.Secondary}" FontSize="12" Margin="0,8,0,12" />
+                    <WrapPanel>
+                        <Button Command="{Binding FirewallSetupCommand}" Content="{DynamicResource S.Action.Firewall}" Margin="0,0,8,8" />
+                        <Button Command="{Binding OpenLogFolderCommand}" Content="{DynamicResource S.Action.OpenLogs}" Margin="0,0,8,8" />
+                        <Button Command="{Binding ClearCacheCommand}" Content="{DynamicResource S.Action.ClearCache}" Margin="0,0,8,8" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{DynamicResource S.Card.Adapters}" Style="{StaticResource Text.CardTitle}" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Adapters}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Style="{StaticResource Text.Body}" FontSize="13" />
+                                        <TextBlock Style="{StaticResource Text.Secondary}" FontSize="12">
+                                            <Run Text="{Binding Kind, Mode=OneWay}" /> · <Run Text="{Binding PrimaryIPv4, Mode=OneWay}" /> · Score <Run Text="{Binding SuitabilityScore, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Description}" Style="{StaticResource Text.Secondary}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Button.Icon}" Content="&#xE74D;" Command="{Binding ClearLogViewCommand}"
+                                ToolTip="{DynamicResource S.Action.ClearView}" />
+                        <TextBlock Text="{DynamicResource S.Card.Log}" Style="{StaticResource Text.CardTitle}" />
+                    </DockPanel>
+                    <ListBox x:Name="LogList" ItemsSource="{Binding LogLines}" Background="Transparent" BorderThickness="0"
+                             Foreground="{DynamicResource Brush.Text}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                             VirtualizingPanel.IsVirtualizing="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>DXMirror.App</RootNamespace>
+    <AssemblyName>DXMirror</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\DXMirror.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Version>0.2.0</Version>
+    <Product>DXMirror</Product>
+    <Company>DXMirror</Company>
+    <Description>AirPlay receiver for Windows (based on UxPlay)</Description>
+    <Copyright>GPL-3.0-or-later</Copyright>
+    <!-- self-contained so the target PC needs no .NET installation -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- System.Windows.Forms is only used for the tray icon; avoid ambiguous type names -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <!-- WPF projects leave out System.IO by default (clash with System.Windows.Shapes.Path) -->
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DXMirror.Core\DXMirror.Core.csproj" />
+  </ItemGroup>
+
+  <!-- bundled receiver built by build/build-uxplay.sh (UxPlay + GStreamer runtime) -->
+  <ItemGroup Condition="Exists('$(MSBuildThisFileDirectory)..\..\artifacts\receiver\bin\uxplay.exe')">
+    <None Include="$(MSBuildThisFileDirectory)..\..\artifacts\receiver\**\*" LinkBase="receiver"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\DXMirror.ico" />
+    <None Include="Assets\DXMirror.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,213 @@
+<UserControl x:Class="DXMirror.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DXMirror.App.Controls"
+             xmlns:vm="clr-namespace:DXMirror.App.ViewModels">
+    <Grid x:Name="Root" Margin="32,24,32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="HeaderRow" Height="Auto" />
+            <RowDefinition Height="*" MinHeight="260" />
+            <RowDefinition x:Name="ControlsRow" Height="Auto" />
+            <RowDefinition x:Name="CardsRow" Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== header: status + main actions ===== -->
+        <Grid x:Name="Header" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="{DynamicResource S.Nav.Dashboard}" Style="{StaticResource Text.Title}" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Border x:Name="StatusPill" Style="{StaticResource Pill}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock x:Name="StatusText" Text="{Binding StatusTitle}" FontSize="13" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Text.Secondary}" Margin="12,0,0,0"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <Border Margin="0,12,0,0" Padding="12,8" CornerRadius="{StaticResource Radius.Control}" HorizontalAlignment="Left"
+                        Background="{DynamicResource Brush.WarningSubtle}"
+                        Visibility="{Binding ShowDiscoveryWarning, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE7BA;" Style="{StaticResource Text.Icon}" Foreground="{DynamicResource Brush.Warning}" Margin="0,0,10,0" />
+                        <TextBlock Text="{Binding DiscoveryWarning}" Style="{StaticResource Text.Body}" FontSize="13" MaxWidth="620" VerticalAlignment="Center" />
+                        <Button Content="{DynamicResource S.Action.DownloadBonjour}" Command="{Binding BonjourDownloadCommand}" Margin="12,0,0,0"
+                                Visibility="{Binding BonjourMissing, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Command="{Binding DisconnectCommand}" Margin="0,0,8,0"
+                        Visibility="{Binding HasClient, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8CD;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.Disconnect}" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="StopButton" Command="{Binding StopCommand}"
+                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE71A;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.Stop}" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="StartButton" Command="{Binding StartCommand}" Style="{StaticResource Button.Primary}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE768;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.Start}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== video / idle area ===== -->
+        <Border x:Name="VideoFrame" Grid.Row="1" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Video}"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" ClipToBounds="True">
+            <Grid>
+                <!-- the native video surface; kept in the tree (Hidden, not Collapsed) so its HWND always exists -->
+                <controls:VideoHost x:Name="Video" Visibility="Hidden" />
+
+                <Grid x:Name="IdlePanel" Background="{DynamicResource Brush.Surface}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460">
+                        <Border Width="72" Height="72" CornerRadius="36" Background="{DynamicResource Brush.AccentSubtle}" Margin="0,0,0,20">
+                            <TextBlock Text="&#xE8EA;" Style="{StaticResource Text.Icon}" FontSize="32" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource Brush.Accent}" />
+                        </Border>
+                        <TextBlock Text="{Binding IdleMessage}" Style="{StaticResource Text.Body}" FontSize="15" TextAlignment="Center" />
+
+                        <!-- PIN prompt -->
+                        <Border Margin="0,24,0,0" Padding="24,14" CornerRadius="{StaticResource Radius.Card}" HorizontalAlignment="Center"
+                                Background="{DynamicResource Brush.AccentSubtle}"
+                                Visibility="{Binding ShowPin, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource S.Pin.Title}" Style="{StaticResource Text.Secondary}" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding PendingPin}" FontSize="40" FontWeight="SemiBold" HorizontalAlignment="Center"
+                                           FontFamily="Cascadia Mono, Consolas" Foreground="{DynamicResource Brush.Accent}" />
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding NetworkHint}" Style="{StaticResource Text.Secondary}" TextAlignment="Center" Margin="0,16,0,0"
+                                   Foreground="{DynamicResource Brush.Warning}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ===== live controls ===== -->
+        <Grid x:Name="LiveControls" Grid.Row="2" Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Style="{StaticResource Text.Secondary}" Margin="0,0,20,0">
+                    <Run Text="{DynamicResource S.Live.Fps}" />: <Run Text="{Binding Fps, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource Text.Secondary}" Margin="0,0,20,0">
+                    <Run Text="{DynamicResource S.Live.Resolution}" />: <Run Text="{Binding Resolution, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource Text.Secondary}" Margin="0,0,20,0">
+                    <Run Text="{DynamicResource S.Live.Audio}" />: <Run Text="{Binding AudioStatus, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+                <TextBlock Style="{StaticResource Text.Secondary}">
+                    <Run Text="{DynamicResource S.Live.Quality}" />: <Run Text="{Binding Quality, Mode=OneWay}" FontWeight="SemiBold" />
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button Style="{StaticResource Button.Icon}" Content="{Binding MuteIcon}" Command="{Binding MuteCommand}"
+                        ToolTip="{DynamicResource S.Action.Mute}" />
+                <Slider Width="160" Minimum="0" Maximum="100" Value="{Binding Volume}" Margin="4,0,16,0"
+                        ToolTip="{DynamicResource S.Live.Volume}" AutomationProperties.Name="{DynamicResource S.Live.Volume}" />
+                <TextBlock Text="{Binding RecordingText}" Foreground="{DynamicResource Brush.Danger}" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Margin="0,0,10,0"
+                           Visibility="{Binding ShowRecordingText, Converter={StaticResource BoolToVis}}" />
+                <Button Command="{Binding RecordCommand}" Margin="0,0,8,0" ToolTip="{DynamicResource S.Hint.RecordButton}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="10" Height="10" Fill="{DynamicResource Brush.Danger}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding RecordButtonText}" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding FullscreenCommand}" ToolTip="F11">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE740;" Style="{StaticResource Text.Icon}" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource S.Action.Fullscreen}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- ===== info cards ===== -->
+        <UniformGrid x:Name="Cards" Grid.Row="3" Rows="1" Margin="-6,16,-6,0">
+            <Border Style="{StaticResource Card}" Margin="6,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.Card.Receiver}" Style="{StaticResource Text.CardTitle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{DynamicResource S.Field.DeviceName}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding DeviceName}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="1" Text="{DynamicResource S.Field.Service}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ServiceStatus}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="2" Text="{DynamicResource S.Field.Network}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding NetworkStatus}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="3" Text="{DynamicResource S.Field.Adapter}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AdapterText}" Style="{StaticResource Text.Value}"
+                                   ToolTip="{Binding AdapterText}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="6,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.Card.Connection}" Style="{StaticResource Text.CardTitle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{DynamicResource S.Field.Client}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding ClientName}" Style="{StaticResource Text.Value}" ToolTip="{Binding ClientModel}" />
+                        <TextBlock Grid.Row="1" Text="{DynamicResource S.Field.State}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ConnectionStatus}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="2" Text="{DynamicResource S.Field.Duration}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Duration}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="3" Text="{DynamicResource S.Field.Mode}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding StreamKindText}" Style="{StaticResource Text.Value}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="6,0">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource S.Card.Stream}" Style="{StaticResource Text.CardTitle}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{DynamicResource S.Field.Codec}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Codec}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="1" Text="{DynamicResource S.Field.Bitrate}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Bitrate}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="2" Text="{DynamicResource S.Field.Audio}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AudioStatus}" Style="{StaticResource Text.Value}" />
+                        <TextBlock Grid.Row="3" Text="{DynamicResource S.Field.Heartbeats}" Style="{StaticResource Text.Label}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding MissedHeartbeats}" Style="{StaticResource Text.Value}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,528 @@
+diff --git a/lib/mdnsd/mdnsd.c b/lib/mdnsd/mdnsd.c
+index 97a1ba6..d81baae 100644
+--- a/lib/mdnsd/mdnsd.c
++++ b/lib/mdnsd/mdnsd.c
+@@ -348,6 +348,16 @@ static int mdns_query_type_matches(uint16_t query_type, uint16_t record_type)
+ static uint32_t mdns_get_default_ipv4(void)
+ {
+     uint32_t addr = 0;
++    {
++        /* DXMirror: allow the user-selected network adapter (IPv4 address) to be used */
++        const char *ab_ip = getenv("DXMIRROR_MDNS_IPV4");
++        if (ab_ip && *ab_ip) {
++            unsigned long ab_a = inet_addr(ab_ip);
++            if (ab_a != INADDR_NONE && ab_a != 0) {
++                return (uint32_t) ab_a;
++            }
++        }
++    }
+ #ifdef _WIN32
+     ULONG buflen = 15000;
+     PIP_ADAPTER_ADDRESSES pAddresses = NULL;
+diff --git a/renderers/mux_renderer.c b/renderers/mux_renderer.c
+index 82fcc02..fab205c 100644
+--- a/renderers/mux_renderer.c
++++ b/renderers/mux_renderer.c
+@@ -128,7 +128,10 @@ void mux_renderer_start(void) {
+     if (!no_audio) {
+         g_string_append(launch, "appsrc name=audio_src format=time is-live=true ! queue ! ");
+         if (!audio_is_alac ) {
+-            g_string_append(launch, "aacparse ! queue ! ");
++            /* DXMirror: mirror audio is AAC-ELD, which most players (Windows media player) cannot decode:
++             * re-encode to AAC-LC. audiorate fills the gap before the first audio buffer with silence. */
++            g_string_append(launch, "avdec_aac ! audioconvert ! audiorate ! audioresample ! "
++                                    "audio/x-raw,rate=48000,channels=2 ! avenc_aac bitrate=192000 ! aacparse ! queue ! ");
+         }
+         g_string_append(launch, "mux. ");
+     }
+@@ -152,8 +155,9 @@ void mux_renderer_start(void) {
+     g_string_append(launch,
+                     "mp4mux name=mux fragment-duration=2000 "
+                     "fragment-mode=first-moov-then-finalise "
+-                    "! filesink name=filesink location=");
++                    "! filesink name=filesink location=\"");   /* DXMirror: quoted (paths with spaces) */
+     g_string_append(launch, filename->str);
++    g_string_append(launch, "\"");
+ 
+     logger_log(logger, LOGGER_DEBUG, "created Mux pipeline: %s", launch->str);
+ 
+@@ -257,7 +261,7 @@ void mux_renderer_push_audio(unsigned char *data, int data_len, uint64_t ntp_tim
+     if (!renderer->audio_started && renderer->first_video_time != GST_CLOCK_TIME_NONE) {
+         renderer->audio_started = TRUE;
+         renderer->first_audio_time = (GstClockTime)ntp_time;
+-        if (renderer->first_audio_time > renderer->first_video_time) {
++        if (renderer->is_alac && renderer->first_audio_time > renderer->first_video_time) {   /* DXMirror: AAC gap is filled by audiorate */
+             GstClockTime silence_duration = renderer->first_audio_time - renderer->first_video_time;
+             guint64 num_samples = (silence_duration * 44100) / GST_SECOND;
+             gsize silence_size = num_samples * 2 * 2;            
+@@ -334,6 +338,10 @@ void mux_renderer_stop(void) {
+     video_is_h265 = FALSE;
+ }
+ 
++bool mux_renderer_is_running(void) {
++    return renderer && renderer->pipeline;
++}
++
+ void mux_renderer_destroy(void) {
+     mux_renderer_stop();
+     if (renderer) {
+diff --git a/renderers/mux_renderer.h b/renderers/mux_renderer.h
+index 97a1642..68fce71 100644
+--- a/renderers/mux_renderer.h
++++ b/renderers/mux_renderer.h
+@@ -36,6 +36,7 @@ void mux_renderer_push_video(unsigned char *data, int data_len, uint64_t ntp_tim
+ void mux_renderer_push_audio(unsigned char *data, int data_len, uint64_t ntp_time);
+ void mux_renderer_stop(void);
+ void mux_renderer_destroy(void);
++bool mux_renderer_is_running(void);   /* DXMirror: true if the recording pipeline exists */
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/uxplay.cpp b/uxplay.cpp
+index 71a378d..164887e 100644
+--- a/uxplay.cpp
++++ b/uxplay.cpp
+@@ -73,6 +73,90 @@
+ #include "renderers/video_renderer.h"
+ #include "renderers/audio_renderer.h"
+ #include "renderers/mux_renderer.h"
++
++/* ===== DXMirror integration (added by DXMirror build, GPL-3.0 like UxPlay) =====
++ * When DXMIRROR_EVENTS is set, machine-readable status lines "@@DXM <event> k=v ..."
++ * are written to stdout. When DXMIRROR_CONTROL is set (Windows), a line "quit" on
++ * stdin (or stdin being closed) triggers the same clean shutdown as Ctrl-C.
++ * DXMIRROR_HWND=<handle> lets GStreamer render into a window owned by DXMirror. */
++#include <atomic>
++#include <thread>
++#include <iostream>
++#include <string>
++static bool ab_enabled = false;
++static std::atomic<unsigned int> ab_frames{0};
++static std::atomic<unsigned long long> ab_video_bytes{0};
++static std::string ab_clean(const char *in) {
++    std::string out;
++    if (!in) return out;
++    for (const char *c = in; *c && out.size() < 96; c++) {
++        unsigned char u = (unsigned char) *c;
++        if (u < 0x20 || u == 0x7f) continue;
++        out += (*c == '"') ? '\'' : *c;
++    }
++    return out;
++}
++static void ab_event(const char *fmt, ...) {
++    if (!ab_enabled) return;
++    char buf[600];
++    va_list ap;
++    va_start(ap, fmt);
++    vsnprintf(buf, sizeof(buf), fmt, ap);
++    va_end(ap);
++    fprintf(stdout, "@@DXM %s\n", buf);
++    fflush(stdout);
++}
++/* DXMirror volume: the app's own volume factor (stdin "volume x", 0..1) multiplies the AirPlay
++ * client volume, so both the iPhone and DXMirror volume controls work. */
++static double ab_app_volume = 1.0;
++static double ab_client_gst_volume = 1.0;
++static gboolean ab_apply_volume(gpointer data) {
++    (void) data;
++    audio_renderer_set_volume(ab_client_gst_volume * ab_app_volume);
++    return G_SOURCE_REMOVE;
++}
++/* DXMirror recording (stdin "record_start <path-prefix>" / "record_stop").
++ * The iPhone sends a key frame (SPS+PPS+IDR) only at the start of a stream and on changes, so the
++ * frames since the last key frame are kept (bounded) to let a recording start at any moment. */
++#include <mutex>
++#include <vector>
++static std::mutex ab_mux_mutex;
++static bool ab_video_is_h265 = false;
++static bool ab_video_active = false;
++static bool ab_rec_waiting = false;           /* armed, waiting for the next key frame */
++static unsigned ab_last_w = 0, ab_last_h = 0;
++struct ab_frame { std::vector<unsigned char> data; uint64_t ntp; };
++static std::vector<ab_frame> ab_gop;
++static size_t ab_gop_bytes = 0;
++static bool ab_gop_valid = false;             /* buffer starts with a key frame */
++static const size_t AB_GOP_LIMIT = 96u * 1024u * 1024u;
++static std::string ab_record_prefix;
++
++static bool ab_is_keyframe(const unsigned char *d, int len) {
++    /* UxPlay delivers Annex-B access units; a key frame access unit starts with SPS (h264) / VPS (h265) */
++    if (len < 5 || d[0] != 0 || d[1] != 0 || d[2] != 0 || d[3] != 1) return false;
++    if (ab_video_is_h265) return ((d[4] >> 1) & 0x3f) == 32;
++    return (d[4] & 0x1f) == 7;
++}
++
++static void ab_gop_add(bool key, const unsigned char *d, int len, uint64_t ntp) {
++    if (key) {
++        ab_gop.clear();
++        ab_gop_bytes = 0;
++        ab_gop_valid = true;
++    }
++    if (!ab_gop_valid) return;
++    if (ab_gop_bytes + (size_t) len > AB_GOP_LIMIT) {
++        ab_gop.clear();
++        ab_gop_bytes = 0;
++        ab_gop_valid = false;     /* too long since the last key frame: wait for the next one */
++        return;
++    }
++    ab_gop.push_back(ab_frame{std::vector<unsigned char>(d, d + len), ntp});
++    ab_gop_bytes += (size_t) len;
++}
++
++/* ===== end DXMirror integration header ===== */
+ #ifdef DBUS
+ #include <dbus/dbus.h>
+ #endif
+@@ -214,6 +298,53 @@ static std::string audio_rtp_pipeline = "";
+ static GMainLoop *gmainloop = NULL;
+ static bool mux_to_file = false;
+ static std::string mux_filename = "recording";
++
++/* ===== DXMirror recording control (needs the globals above) ===== */
++/* called with ab_mux_mutex held, on the GLib main loop */
++static void ab_record_start_locked() {
++    if (mux_to_file) return;
++    mux_filename = ab_record_prefix;
++    mux_renderer_init(render_logger, mux_filename.c_str(), use_audio, use_video);
++    mux_to_file = true;
++    if (ab_video_active && use_video) {
++        if (ab_gop_valid && !ab_gop.empty()) {
++            mux_renderer_choose_video_codec(ab_video_is_h265);
++            for (auto &f : ab_gop) {
++                mux_renderer_push_video(f.data.data(), (int) f.data.size(), f.ntp);
++            }
++            ab_event(mux_renderer_is_running() ? "recording state=started" : "recording state=error");
++        } else {
++            ab_rec_waiting = true;
++            ab_event("recording state=waiting");
++        }
++    } else {
++        /* no mirroring right now: the next stream starts the recording (also audio-only streams) */
++        ab_event("recording state=armed");
++    }
++}
++
++static void ab_record_stop_locked() {
++    if (!mux_to_file) return;
++    mux_renderer_stop();
++    mux_to_file = false;
++    ab_rec_waiting = false;
++    ab_event("recording state=stopped");
++}
++
++static gboolean ab_record_start_idle(gpointer data) {
++    (void) data;
++    std::lock_guard<std::mutex> lock(ab_mux_mutex);
++    ab_record_start_locked();
++    return G_SOURCE_REMOVE;
++}
++
++static gboolean ab_record_stop_idle(gpointer data) {
++    (void) data;
++    std::lock_guard<std::mutex> lock(ab_mux_mutex);
++    ab_record_stop_locked();
++    return G_SOURCE_REMOVE;
++}
++/* ===== end DXMirror recording control ===== */
+ static bool raspberry_pi_hls_support = false;
+ static std::string custom_profile_string = "";
+ 
+@@ -657,6 +788,11 @@ static void dump_video_to_file(unsigned char *data, int datalen) {
+ }
+ 
+ static gboolean feedback_callback(gpointer loop) {
++    if (ab_enabled && open_connections) {
++        unsigned int f = ab_frames.exchange(0);
++        unsigned long long b = ab_video_bytes.exchange(0);
++        ab_event("stats fps=%u kbps=%llu missed=%u", f, (b * 8ULL) / 1000ULL, missed_feedback);
++    }
+     if (open_connections) {
+         if (missed_feedback_limit && missed_feedback > missed_feedback_limit) {
+             LOGI("***ERROR lost connection with client (network problem?)");
+@@ -2662,8 +2798,23 @@ extern "C" int video_set_codec_and_size(void *cls, video_codec_t codec, unsigned
+                                         unsigned short height_source, unsigned short x_offset,
+                                         unsigned short y_offset, unsigned short width, unsigned short height) {
+     bool video_is_h265 = (codec == VIDEO_CODEC_H265);
+-    if (mux_to_file) {
+-        mux_renderer_choose_video_codec(video_is_h265);
++    ab_event("video_size codec=%s src=%ux%u w=%u h=%u", video_is_h265 ? "h265" : "h264",
++             (unsigned) width_source, (unsigned) height_source, (unsigned) width, (unsigned) height);
++    {
++        std::lock_guard<std::mutex> lock(ab_mux_mutex);
++        bool size_changed = (ab_last_w != (unsigned) width || ab_last_h != (unsigned) height);
++        ab_video_is_h265 = video_is_h265;
++        ab_video_active = true;
++        ab_last_w = width;
++        ab_last_h = height;
++        if (mux_to_file) {
++            if (size_changed && !ab_rec_waiting) {
++                mux_renderer_stop();   /* DXMirror: start a new file segment for the new resolution */
++            }
++            ab_rec_waiting = false;
++            mux_renderer_choose_video_codec(video_is_h265);
++            ab_event(mux_renderer_is_running() ? "recording state=started" : "recording state=error");
++        }
+     }
+     if (!use_video) {
+         return 0;
+@@ -2679,6 +2830,11 @@ extern "C" int video_set_codec_and_size(void *cls, video_codec_t codec, unsigned
+ }
+ 
+ extern "C" void display_pin(void *cls, char *pin) {
++    if (ab_enabled) {
++        /* DXMirror shows the PIN in its own UI; do not print it into the (logged) console */
++        ab_event("pin code=%s", pin ? pin : "");
++        return;
++    }
+     int margin = 10;
+     int spacing = 3;
+     char *image = create_pin_display(pin, margin, spacing);
+@@ -2720,6 +2876,7 @@ extern "C" void export_dacp(void *cls, const char *active_remote, const char *da
+ extern "C" void conn_init (void *cls) {
+     open_connections++;
+     LOGD("Open connections: %i", open_connections);
++    ab_event("conn_open count=%u", open_connections);
+     //video_renderer_update_background(1);
+ }
+ 
+@@ -2727,6 +2884,7 @@ extern "C" void conn_destroy (void *cls) {
+     //video_renderer_update_background(-1);
+     open_connections--;
+     LOGD("Open connections: %i", open_connections);
++    ab_event("conn_close count=%u", open_connections);
+     if (open_connections == 0) {
+         remote_clock_offset = 0;
+         if (use_audio) {
+@@ -2735,8 +2893,18 @@ extern "C" void conn_destroy (void *cls) {
+         if (dacpfile.length()) {
+             remove (dacpfile.c_str());
+         }
+-        if (mux_to_file) {
+-            mux_renderer_stop();
++        {
++            std::lock_guard<std::mutex> lock(ab_mux_mutex);
++            ab_video_active = false;
++            ab_gop.clear();
++            ab_gop_bytes = 0;
++            ab_gop_valid = false;
++            ab_last_w = ab_last_h = 0;
++            if (mux_to_file) {
++                mux_renderer_stop();
++                ab_rec_waiting = false;
++                ab_event("recording state=armed");   /* still recording: the next stream continues */
++            }
+         }
+     }
+ }
+@@ -2747,6 +2915,7 @@ extern "C" void conn_feedback (void *cls) {
+ }
+ 
+ extern "C" void conn_reset (void *cls, int reason) {
++    ab_event("conn_reset reason=%d", reason);
+     switch (reason) {
+     case 1:
+         LOGI("*** ERROR lost connection with client (network problem?)");
+@@ -2768,6 +2937,7 @@ extern "C" void conn_reset (void *cls, int reason) {
+ 
+ extern "C" void report_client_request(void *cls, char *deviceid, char * model, char *name, bool *admit) {
+     LOGI("connection request from %s (%s) with deviceID = %s\n", name, model, deviceid ? deviceid : "(no DeviceI)D");
++    ab_event("client_request name=\"%s\" model=\"%s\"", ab_clean(name).c_str(), ab_clean(model).c_str());
+     if (restrict_clients && deviceid) {
+         *admit = check_client(deviceid);
+         if (*admit == false) {
+@@ -2783,6 +2953,7 @@ extern "C" void report_client_request(void *cls, char *deviceid, char * model, c
+     if (check_blocked_client(deviceid)) {
+         *admit = false;
+         LOGI("*** attempt to connect by blocked client (clientID %s): DENIED\n", deviceid);
++        ab_event("client_denied");
+     }
+     // Pass device model to renderer for device frame display
+     if (*admit && use_video) {
+@@ -2794,8 +2965,11 @@ extern "C" void audio_process (void *cls, raop_ntp_t *ntp, audio_decode_struct *
+     if (dump_audio) {
+         dump_audio_to_file(data->data, data->data_len, (data->data)[0] & 0xf0);
+     }
+-    if (mux_to_file) {
+-        mux_renderer_push_audio(data->data, data->data_len, data->ntp_time_remote);
++    {
++        std::lock_guard<std::mutex> lock(ab_mux_mutex);
++        if (mux_to_file && !ab_rec_waiting) {
++            mux_renderer_push_audio(data->data, data->data_len, data->ntp_time_remote);
++        }
+     }
+     if (use_audio) {
+         if (!remote_clock_offset) {
+@@ -2826,11 +3000,27 @@ extern "C" void audio_process (void *cls, raop_ntp_t *ntp, audio_decode_struct *
+ }
+ 
+ extern "C" void video_process (void *cls, raop_ntp_t *ntp, video_decode_struct *data) {
++    ab_frames++;
++    ab_video_bytes += (unsigned long long) data->data_len;
+     if (dump_video) {
+         dump_video_to_file(data->data, data->data_len);
+     }
+-    if (mux_to_file) {
+-        mux_renderer_push_video(data->data, data->data_len, data->ntp_time_remote);
++    {
++        std::lock_guard<std::mutex> lock(ab_mux_mutex);
++        bool ab_key = ab_is_keyframe(data->data, data->data_len);
++        if (ab_enabled) {
++            ab_gop_add(ab_key, data->data, data->data_len, data->ntp_time_remote);
++        }
++        if (mux_to_file) {
++            if (ab_rec_waiting && ab_key) {
++                mux_renderer_choose_video_codec(ab_video_is_h265);
++                ab_rec_waiting = false;
++                ab_event(mux_renderer_is_running() ? "recording state=started" : "recording state=error");
++            }
++            if (!ab_rec_waiting) {
++                mux_renderer_push_video(data->data, data->data_len, data->ntp_time_remote);
++            }
++        }
+     }
+     if (use_video) {
+         if (!remote_clock_offset) {
+@@ -2891,6 +3081,7 @@ extern "C" double audio_set_client_volume(void *cls) {
+ 
+ //callback from RAOP_SET_PARAMETER "volume" handler
+ extern "C" void audio_set_volume (void *cls, float volume) {
++    ab_event("client_volume db=%.2f", (double) volume);
+     double db, db_flat, frac, gst_volume;
+     if (!use_audio) {
+       return;
+@@ -2934,14 +3125,16 @@ extern "C" void audio_set_volume (void *cls, float volume) {
+         /* conversion from (gain) decibels to GStreamer's linear volume scale */
+         gst_volume = pow(10.0, 0.05*db);
+     }
+-    audio_renderer_set_volume(gst_volume);
+-    video_renderer_hls_set_volume(gst_volume);
++    ab_client_gst_volume = gst_volume;
++    audio_renderer_set_volume(gst_volume * ab_app_volume);
++    video_renderer_hls_set_volume(gst_volume * ab_app_volume);
+     LOGI("AirPlay volume %.1f dB (slider %.0f%%): GStreamer volume %.3f", (double) volume, 100.0 * frac, gst_volume);
+ }
+ 
+ extern "C" void audio_get_format (void *cls, unsigned char *ct, unsigned short *spf, bool *usingScreen, bool *isMedia, uint64_t *audioFormat) {
+     unsigned char type;
+     LOGI("ct=%d spf=%d usingScreen=%d isMedia=%d  audioFormat=0x%lx",*ct, *spf, *usingScreen, *isMedia, (unsigned long) *audioFormat);
++    ab_event("audio_format ct=%d spf=%d screen=%d media=%d", (int) *ct, (int) *spf, *usingScreen ? 1 : 0, *isMedia ? 1 : 0);
+     switch (*ct) {
+     case 2:
+         type = 0x20;
+@@ -2961,10 +3154,20 @@ extern "C" void audio_get_format (void *cls, unsigned char *ct, unsigned short *
+     
+     if (use_audio) {
+       audio_renderer_start(ct);
++      if (ab_enabled) {
++          /* re-apply DXMirror volume: the renderer ignores volume changes before it is started */
++          audio_renderer_set_volume(ab_client_gst_volume * ab_app_volume);
++      }
+     }
+ 
+-    if (mux_to_file) {
+-        mux_renderer_choose_audio_codec(*ct);
++    {
++        std::lock_guard<std::mutex> lock(ab_mux_mutex);
++        if (mux_to_file) {
++            mux_renderer_choose_audio_codec(*ct);
++            if (*ct == 2) {
++                ab_event(mux_renderer_is_running() ? "recording state=started" : "recording state=error");   /* audio-only (ALAC) recording */
++            }
++        }
+     }
+ 
+     if (coverart_filename.length()) {
+@@ -3496,6 +3699,54 @@ int main (int argc, char *argv[]) {
+ 
+     LOGI("UxPlay %s: An Open-Source AirPlay mirroring and audio-streaming server.", VERSION);
+ 
++    if (getenv("DXMIRROR_EVENTS")) {
++        ab_enabled = true;
++    }
++#ifdef _WIN32
++    {
++        const char *ab_hwnd = getenv("DXMIRROR_HWND");
++        if (ab_hwnd && *ab_hwnd) {
++            video_renderer_set_window_handle((uintptr_t) strtoull(ab_hwnd, NULL, 0));
++        }
++    }
++    if (getenv("DXMIRROR_CONTROL")) {
++        std::thread([]() {
++            std::string line;
++            while (std::getline(std::cin, line)) {
++                if (line.rfind("quit", 0) == 0) {
++                    break;
++                }
++                if (line.rfind("record_start ", 0) == 0) {
++                    {
++                        std::lock_guard<std::mutex> lock(ab_mux_mutex);
++                        ab_record_prefix = line.substr(13);
++                        while (!ab_record_prefix.empty() &&
++                               (ab_record_prefix.back() == '\r' || ab_record_prefix.back() == ' ')) {
++                            ab_record_prefix.pop_back();
++                        }
++                    }
++                    if (!ab_record_prefix.empty()) g_idle_add(ab_record_start_idle, NULL);
++                    continue;
++                }
++                if (line.rfind("record_stop", 0) == 0) {
++                    g_idle_add(ab_record_stop_idle, NULL);
++                    continue;
++                }
++                if (line.rfind("volume ", 0) == 0) {
++                    double v = strtod(line.c_str() + 7, NULL);
++                    if (!(v >= 0.0)) v = 0.0;
++                    if (v > 1.0) v = 1.0;
++                    ab_app_volume = v;
++                    g_idle_add(ab_apply_volume, NULL);   /* apply on the GLib main loop thread */
++                }
++            }
++            /* "quit" received or parent process closed stdin: same path as Ctrl-C */
++            ab_event("quitting");
++            CtrlHandler(CTRL_C_EVENT);
++        }).detach();
++    }
++#endif
++
+ #ifdef DBUS
+     if (scrsv && !use_video) {
+         LOGI ("-scrsv = %d will be ignored, as no video will be rendered", scrsv);
+@@ -3774,6 +4025,8 @@ int main (int argc, char *argv[]) {
+         stop_dnssd();
+         cleanup();
+     }
++    /* DXMirror: server running and services registered via mDNS */
++    ab_event("started version=%s", VERSION);
+     reconnect:
+     compression_type = 0;
+     close_window = new_window_closing_behavior;
+@@ -3804,12 +4057,27 @@ int main (int argc, char *argv[]) {
+             raop_start_httpd(raop, &port);
+             raop_set_port(raop, port);
+         }
+-        if (mux_to_file) {
+-            mux_renderer_stop();
++        {
++            std::lock_guard<std::mutex> lock(ab_mux_mutex);
++            ab_video_active = false;
++            ab_gop.clear();
++            ab_gop_bytes = 0;
++            ab_gop_valid = false;
++            ab_last_w = ab_last_h = 0;
++            if (mux_to_file) {
++                mux_renderer_stop();
++                ab_rec_waiting = false;
++                ab_event("recording state=armed");   /* still recording: the next stream continues */
++            }
+         }
+         goto reconnect;
+     } else {
+         LOGI("Stopping RAOP Server...");
++        ab_event("stopping");
++        {
++            std::lock_guard<std::mutex> lock(ab_mux_mutex);
++            ab_record_stop_locked();
++        }
+         stop_raop_server();
+         stop_dnssd();
+     }
