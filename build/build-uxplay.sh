@@ -12,6 +12,7 @@
 set -euo pipefail
 
 UXPLAY_REPO="https://github.com/FDH2/UxPlay.git"
+UXPLAY_VERSION="1.74"
 UXPLAY_COMMIT="fbd040e70e754e01fa7e6df810fecd08b6484ada"   # UxPlay 1.74, 2026-11-23
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$ROOT/build/work"
@@ -134,6 +135,26 @@ while ((${#queue[@]})); do
   done < <(collect_deps "$f")
 done
 echo "    ${#SEEN[@]} DLLs bundled"
+
+echo "==> Recording the native packages actually shipped"
+runtime_inventory="$STAGE/licenses/native-inventory.tsv"
+printf 'UxPlay\t%s\t%s\n' "$UXPLAY_VERSION" "$UXPLAY_COMMIT" > "$runtime_inventory"
+{
+  for file in "$STAGE"/bin/* "$STAGE"/lib/gstreamer-1.0/*.dll; do
+    case "$file" in
+      */bin/uxplay.exe) continue ;;
+      */bin/gst-plugin-scanner.exe) original="$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" ;;
+      *) original="$PREFIX/${file#"$STAGE"/}" ;;
+    esac
+    owner="$(pacman -Qqo "$original")"
+    read -r package version <<< "$(pacman -Q "$owner")"
+    base="$(awk '/^%BASE%$/ { getline; print; exit }' "/var/lib/pacman/local/$package-$version/desc")"
+    if [[ -z "$base" ]]; then
+      base="${package/mingw-w64-ucrt-x86_64-/mingw-w64-}"
+    fi
+    printf '%s\t%s\t%s\n' "$package" "$base" "$version"
+  done
+} | sort -u >> "$runtime_inventory"
 
 echo "==> Licenses"
 cp "$WORK/UxPlay/LICENSE" "$STAGE/licenses/UxPlay-GPL-3.0.txt"
