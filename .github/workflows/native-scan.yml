@@ -1,0 +1,76 @@
+name: Native vulnerability scan
+
+on:
+  workflow_call:
+    inputs:
+      published:
+        description: Scan the SBOM from the latest public release
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  native-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: '!inputs.published'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-x64
+          path: scan-input
+      - id: published
+        if: inputs.published
+        name: Download the latest release SBOM
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")
+          tag=$(jq -er .tag_name <<< "$release")
+          if jq -e 'any(.assets[]; .name == "DXMirror-native.cdx.json")' <<< "$release" > /dev/null; then
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir scan-input --pattern DXMirror-native.cdx.json
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Release $tag predates the native SBOM"
+          fi
+      - if: '!inputs.published || steps.published.outputs.available == ''true'''
+        uses: anchore/scan-action/download-grype@11983a512817154c80a9db660c1a184be7513ed6 # v7.4.3
+        id: grype
+        with:
+          grype-version: v0.122.1
+      - if: '!inputs.published || steps.published.outputs.available == ''true'''
+        name: Check MSYS2 libraries
+        env:
+          GRYPE: ${{ steps.grype.outputs.cmd }}
+        run: |
+          mkdir -p scan-results
+          status=0
+          "$GRYPE" sbom:scan-input/DXMirror-native.cdx.json --fail-on high \
+            --output table --output json=scan-results/grype.json || status=$?
+          # One release exception for known native dependency findings.
+          if [[ "$status" == 2 && "$GITHUB_REPOSITORY" == "dxox57/DXMirror" &&
+                "$GITHUB_EVENT_NAME" == "release" && "$GITHUB_REF" == "refs/tags/v0.3.1" &&
+                -s scan-results/grype.json ]]; then
+            echo "::warning::v0.3.1 release exception: Grype found high or critical CVEs. Review the native scan report."
+          else
+            exit "$status"
+          fi
+      - if: '!cancelled() && (!inputs.published || steps.published.outputs.available == ''true'')'
+        name: Check UxPlay advisories
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p scan-results
+          python3 build/native-security.py scan-uxplay scan-input/DXMirror-native.cdx.json scan-results/uxplay.json
+      - if: '!cancelled() && (!inputs.published || steps.published.outputs.available == ''true'')'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-report-${{ inputs.published && 'published' || 'build' }}
+          path: scan-results/
+          if-no-files-found: warn
+          retention-days: 14

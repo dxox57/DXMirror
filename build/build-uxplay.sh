@@ -45,9 +45,10 @@ pacman_install \
 echo "==> Fetching UxPlay $UXPLAY_COMMIT"
 mkdir -p "$WORK"
 if [[ ! -d "$WORK/UxPlay/.git" ]]; then
-  git clone "$UXPLAY_REPO" "$WORK/UxPlay"
+  git clone -c core.autocrlf=false "$UXPLAY_REPO" "$WORK/UxPlay"
 fi
 cd "$WORK/UxPlay"
+git config core.autocrlf false
 git fetch --quiet origin
 git reset --hard --quiet
 git clean -fdxq
@@ -168,11 +169,37 @@ for element in appsrc queue h264parse h265parse decodebin avdec_h264 avdec_aac a
     case "$element" in d3d11h264dec|d3d12videosink) ;; *) missing=1 ;; esac   # GPU-specific elements may be absent on build PCs
   fi
 done
-PATH="$ISOLATED_PATH" "$STAGE/bin/uxplay.exe" -v | head -n 2
+version_output="$(PATH="$ISOLATED_PATH" "$STAGE/bin/uxplay.exe" -v)"
+printf '%s\n' "$version_output"
+uxplay_version="$(sed -n 's/^UxPlay version \([0-9.]*\);.*/\1/p' <<< "$version_output")"
+if [[ ! "$uxplay_version" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+  echo "ERROR: could not determine the bundled UxPlay version." >&2
+  exit 1
+fi
 if (( missing )); then
   echo "ERROR: required GStreamer elements are missing from the bundle." >&2
   exit 1
 fi
+
+echo "==> Recording the native packages actually shipped"
+runtime_inventory="$STAGE/licenses/native-inventory.tsv"
+printf 'UxPlay\t%s\t%s\n' "$uxplay_version" "$UXPLAY_COMMIT" > "$runtime_inventory"
+{
+  for file in "$STAGE"/bin/* "$STAGE"/lib/gstreamer-1.0/*.dll; do
+    case "$file" in
+      */bin/uxplay.exe) continue ;;
+      */bin/gst-plugin-scanner.exe) original="$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" ;;
+      *) original="$PREFIX/${file#"$STAGE"/}" ;;
+    esac
+    owner="$(pacman -Qqo "$original")"
+    read -r package version <<< "$(pacman -Q "$owner")"
+    base="$(awk '/^%BASE%$/ { getline; print; exit }' "/var/lib/pacman/local/$package-$version/desc")"
+    if [[ -z "$base" ]]; then
+      base="${package/mingw-w64-ucrt-x86_64-/mingw-w64-}"
+    fi
+    printf '%s\t%s\t%s\n' "$package" "$base" "$version"
+  done
+} | sort -u >> "$runtime_inventory"
 
 du -sh "$STAGE"
 echo "==> Receiver ready: $STAGE"

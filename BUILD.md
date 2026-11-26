@@ -54,15 +54,33 @@ cd /c/Users/<du>/Documents/DXMirror
 
 ## Release erstellen
 
-1. Version in `src/DXMirror.App/DXMirror.App.csproj` (`<Version>`) und `app.manifest` erhöhen.
-2. `CHANGELOG.md` ergänzen.
-3. `build\build.cmd` → `artifacts\installer\DXMirror-Setup-<Version>-x64.exe`.
-4. Installer auf einem sauberen Windows (VM ohne Entwicklertools) nach [TESTING.md](TESTING.md) prüfen.
-5. GPL-Pflicht: Quellcode dieses Repositorys inkl. Patch zusammen mit dem Installer bereitstellen.
+1. Bei einer neuen Version `<Version>` in der App-Projektdatei und den Changelog aktualisieren.
+2. Einen GitHub-Release mit Tag `vX.Y.Z` veröffentlichen. Der Tag muss auf den gewünschten Commit mit der passenden Projektversion und dem Workflow zeigen.
+3. Nach erfolgreichem Windows-Build, Tests und CVE-Scan erscheinen beim Release die Installer-EXE, `SHA256.txt`, Quellarchive für DXMirror inklusive Patch und den gepinnten UxPlay-Stand, Lizenztext und native SBOM. Der Build und ein erneuter Lauf sind unter Actions einsehbar.
+4. Installer auf einem sauberen Windows mit echtem AirPlay-Gerät nach [TESTING.md](TESTING.md) prüfen.
 
-## Stand dieses Builds
+Der Upload setzt einen Release voraus, dessen Assets nach Veröffentlichung bearbeitet werden dürfen.
+Bei einem Upload-Fehler den fehlgeschlagenen Job erneut ausführen. Vorhandene Dateien mit gleichem
+SHA-256 bleiben erhalten. Bei abweichendem SHA-256 meldet der Job einen Konflikt.
 
-Der Code wurde in einer Linux-Umgebung ohne .NET-SDK und ohne Windows-Toolchain geschrieben.
-**Er wurde dort nicht kompiliert.** Geprüft wurde nur, dass der UxPlay-Patch sich sauber auf den gepinnten
-Commit anwenden lässt. Beim ersten Build auf Windows sind kleinere Compile-Fehler möglich – bitte die
-Ausgabe von `build\build.cmd` zurückmelden.
+Für den Release `v0.3.1` werden hohe und kritische Grype-Befunde im Report und als Warnung
+angezeigt. Nur beim Upload zu diesem Release blockieren diese Befunde den Job nicht.
+Scannerfehler und die übrigen Prüfungen können den Upload weiterhin blockieren.
+
+## Sicherheitsprüfungen in GitHub Actions
+
+- Pull Requests und Pushes auf `main` bauen den Installer und prüfen NuGet sowie die
+  mitgelieferten nativen Komponenten. NuGet blockiert ab mittel. Der native Scan blockiert
+  nur hohe und kritische Befunde und zeigt mittlere Befunde weiterhin im Bericht.
+- Dependency Review prüft neue Abhängigkeiten in Pull Requests. CodeQL meldet mögliche Probleme
+  in C# und GitHub-Actions-Workflows im Security-Tab. Dependabot öffnet Update-PRs für NuGet und Actions.
+- Die native SBOM enthält das Bundling-Inventar aus MSYS2 sowie Version und Commit von UxPlay.
+  Grype prüft anhand der verfügbaren Paketkennungen. Für UxPlay werden zusätzlich die veröffentlichten
+  Projekt-Advisories geprüft. Fehlende Paketkennungen werden im Build gemeldet.
+- Wöchentlich laufen der Build und eine erneute Prüfung der nativen SBOM aus dem letzten stabilen
+  Release. Bis zum ersten Release mit SBOM meldet der Lauf, dass dieses Artefakt noch fehlt.
+- Der Windows-Workflow kann manuell zur Vorschau gestartet werden. Der Installer erscheint dabei
+  als Actions-Artefakt. Der Upload läuft beim Veröffentlichen eines GitHub-Releases.
+
+Für Dependency Review muss ein Repository-Admin unter **Settings → Advanced Security**
+den **Dependency graph** aktivieren. GitHub kann den Check ohne diese Einstellung mit HTTP 403 ablehnen.
