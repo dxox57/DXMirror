@@ -37,6 +37,8 @@
                         <TextBlock Text="{Binding DiscoveryWarning}" Style="{StaticResource Text.Body}" FontSize="13" MaxWidth="620" VerticalAlignment="Center" />
                         <Button Content="{DynamicResource S.Action.DownloadBonjour}" Command="{Binding BonjourDownloadCommand}" Margin="12,0,0,0"
                                 Visibility="{Binding BonjourMissing, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="{DynamicResource S.Action.FirewallShort}" Command="{Binding FirewallSetupCommand}" Margin="12,0,0,0"
+                                Visibility="{Binding FirewallMissing, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -79,16 +81,6 @@
                         </Border>
                         <TextBlock Text="{Binding IdleMessage}" Style="{StaticResource Text.Body}" FontSize="15" TextAlignment="Center" />
 
-                        <!-- PIN prompt -->
-                        <Border Margin="0,24,0,0" Padding="24,14" CornerRadius="{StaticResource Radius.Card}" HorizontalAlignment="Center"
-                                Background="{DynamicResource Brush.AccentSubtle}"
-                                Visibility="{Binding ShowPin, Converter={StaticResource BoolToVis}}">
-                            <StackPanel>
-                                <TextBlock Text="{DynamicResource S.Pin.Title}" Style="{StaticResource Text.Secondary}" HorizontalAlignment="Center" />
-                                <TextBlock Text="{Binding PendingPin}" FontSize="40" FontWeight="SemiBold" HorizontalAlignment="Center"
-                                           FontFamily="Cascadia Mono, Consolas" Foreground="{DynamicResource Brush.Accent}" />
-                            </StackPanel>
-                        </Border>
                         <TextBlock Text="{Binding NetworkHint}" Style="{StaticResource Text.Secondary}" TextAlignment="Center" Margin="0,16,0,0"
                                    Foreground="{DynamicResource Brush.Warning}" />
                     </StackPanel>

@@ -77,19 +77,6 @@
                         </Border>
                         <Border Style="{StaticResource Section}">
                             <StackPanel>
-                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Edit.PinEnabled}" Content="{DynamicResource S.Opt.Pin}" />
-                                <TextBlock Text="{DynamicResource S.Hint.Pin}" Style="{StaticResource Hint}" />
-                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0" IsEnabled="{Binding Edit.PinEnabled}">
-                                    <TextBlock Text="{DynamicResource S.Field.FixedPin}" Style="{StaticResource Text.Label}" />
-                                    <TextBox Text="{Binding PinText, UpdateSourceTrigger=PropertyChanged}" Width="90" MaxLength="4" />
-                                    <TextBlock Text="{Binding PinError}" Foreground="{DynamicResource Brush.Danger}" Margin="12,0,0,0" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Edit.RememberPinClients}" IsEnabled="{Binding Edit.PinEnabled}"
-                                          Content="{DynamicResource S.Opt.RememberPin}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource Section}">
-                            <StackPanel>
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Edit.NotifyOnConnect}" Content="{DynamicResource S.Opt.NotifyOnConnect}" />
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Edit.AutoReconnect}" Content="{DynamicResource S.Opt.AutoReconnect}" />
                                 <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding Edit.NewClientTakesOver}" Content="{DynamicResource S.Opt.NewClientTakesOver}" />

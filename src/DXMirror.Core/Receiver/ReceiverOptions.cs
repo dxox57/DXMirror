@@ -7,7 +7,6 @@ namespace DXMirror.Core.Receiver;
 /// <summary>Paths that the receiver needs at runtime (all resolved by the host application).</summary>
 public sealed record ReceiverPaths(
     string KeyFile,
-    string PinRegisterFile,
     string StartupFile);
 
 /// <summary>
@@ -80,13 +79,6 @@ public static class UxPlayStartupFile
         // ---- connection ----
         Add("reset", s.ConnectionTimeoutSeconds.ToString(CultureInfo.InvariantCulture));
         if (s.NewClientTakesOver) Add("nohold");
-        if (s.PinEnabled)
-        {
-            // UxPlay syntax is "-pin" or "-pinNNNN" (no space)
-            if (PinRules.IsValid(s.FixedPin)) AddRaw(lines, caps, "pin", "pin" + s.FixedPin);
-            else Add("pin");
-            if (s.RememberPinClients) Add("reg", paths.PinRegisterFile);
-        }
 
         // ---- diagnostics ----
         if (s.DebugMode || s.LogLevel == "debug")
@@ -96,11 +88,6 @@ public static class UxPlayStartupFile
         }
 
         return lines;
-    }
-
-    private static void AddRaw(List<string> lines, UxPlayCapabilities caps, string option, string raw)
-    {
-        if (caps.Supports(option)) lines.Add(raw);
     }
 
     public static string BuildFileContent(IEnumerable<string> lines)

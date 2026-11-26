@@ -4,22 +4,15 @@ DXMirror macht einen Windows-PC zu einem AirPlay-Empfänger im lokalen Netzwerk:
 iPhone-Bildschirmsynchronisierung mit gleichzeitigem Ton sowie reines AirPlay-Audio (z. B. aus der Musik-App).
 Auf dem iPhone ist keine zusätzliche App nötig, es gibt keine Cloud und kein Konto.
 
-> **Aktuelle Version: 0.2.0.** DXMirror wurde mit einem iPhone 16 Pro getestet. Andere iPhone-Modelle
-> und iOS-Versionen sind noch nicht geprüft; bekannte Einschränkungen und Testergebnisse stehen in
-> [TESTING.md](TESTING.md).
-
-## Download
-
-Die aktuelle Windows-64-Bit-Version gibt es auf der [GitHub-Release-Seite](../../releases/latest).
-Lade dort `DXMirror-Setup-0.2.0-x64.exe` herunter. Der Quellcode und die Lizenzhinweise liegen
-ebenfalls im Release und in diesem Repository.
+> **Status: 0.3.1** – gebaut und getestet unter Windows 11 mit iPhone 16 Pro und iPhone 15 Pro Max
+> (Spiegelung, Ton, Aufnahme). Weitere Geräte und Windows-Versionen siehe [TESTING.md](TESTING.md).
 
 ## Funktionen
 
 | Bereich | Umsetzung |
 |---|---|
 | Bildschirmsynchronisierung | über [UxPlay](https://github.com/FDH2/UxPlay) 1.74 (AirPlay-2-Mirroring, H.264, optional H.265) |
-| Ton beim Spiegeln | AAC-ELD, zeitstempelbasiert mit dem Bild synchronisiert (UxPlay `-vsync`) |
+| Ton beim Spiegeln | AAC-ELD, geringe Verzögerung (ca. 0,5 s); Zeitstempel-Sync optional in den Einstellungen |
 | AirPlay-Audio ohne Bild | ALAC/AAC über denselben Empfänger, optional reiner Audio-Modus |
 | Erkennung durch das iPhone | Apple Bonjour (muss installiert sein; DXMirror warnt und verlinkt den Download) |
 | Aufnahme | MP4 mit Bild und Ton (AAC), Knopf in der Übersicht, Ordner wählbar |
@@ -27,8 +20,8 @@ ebenfalls im Release und in diesem Repository.
 | Darstellung | Direct3D 11/12 direkt in das DXMirror-Fenster, Vollbild (F11 / Esc) |
 | Audio-Ausgabe | WASAPI, wählbares Ausgabegerät, Lautstärke/Stumm nur für DXMirror |
 | Bedienung | Windows-11-Stil, Hell/Dunkel, Deutsch/Englisch, Infobereich (Tray), Autostart |
-| Sicherheit | nur lokal, optionaler PIN, Firewall-Regeln nur für private Netzwerke, keine Telemetrie |
-| Diagnose | Protokolle mit Schwärzung von PIN/Schlüsseln, Ressourcenanzeige, Diagnose-ZIP |
+| Sicherheit | nur lokal, Firewall-Regeln nur für private Netzwerke, keine Telemetrie |
+| Diagnose | Protokolle mit Schwärzung von Schlüsseln/Passwörtern, Ressourcenanzeige, Diagnose-ZIP |
 
 ## Systemanforderungen
 
@@ -41,17 +34,19 @@ ebenfalls im Release und in diesem Repository.
 ## Installation
 
 1. `DXMirror-Setup-<Version>-x64.exe` ausführen (Ergebnis von `build\build.cmd`, siehe [BUILD.md](BUILD.md)).
-2. Im Setup die Aufgabe **„Windows-Firewall-Regeln anlegen“** aktiviert lassen. Die Regeln gelten nur für
-   den mitgelieferten Receiver und nur in privaten Netzwerken.
+   DXMirror wird **nur für den aktuellen Benutzer** installiert (`%LOCALAPPDATA%\Programs\DXMirror`), dafür
+   sind keine Administratorrechte nötig.
+2. Im Setup die Aufgabe **„Windows-Firewall-Regeln anlegen“** aktiviert lassen und die eine Windows-Abfrage
+   bestätigen (sie gilt `netsh`, einem Windows-Programm). Die Regeln gelten nur für den mitgelieferten
+   Receiver und nur in privaten Netzwerken. Wird die Abfrage abgelehnt, bietet DXMirror es später erneut an.
 3. DXMirror starten. Eine .NET- oder GStreamer-Installation ist nicht nötig, alles ist enthalten.
 
 ## Bedienung
 
 1. DXMirror starten – der Empfänger startet automatisch (abschaltbar).
 2. Auf dem iPhone: **Kontrollzentrum → Bildschirmsynchronisierung → „DXMirror – <PC-Name>“**.
-3. Ist der PIN-Schutz aktiv, zeigt DXMirror einen 4-stelligen Code, den du auf dem iPhone eingibst.
-4. Bild und Ton erscheinen in der Übersicht. **F11** oder „Vollbild“ für Vollbild, **Esc** zurück.
-5. „Verbindung trennen“ beendet die Sitzung, „Receiver stoppen“ schaltet DXMirror unsichtbar.
+3. Bild und Ton erscheinen in der Übersicht. **F11** oder „Vollbild“ für Vollbild, **Esc** zurück.
+4. „Verbindung trennen“ beendet die Sitzung, „Receiver stoppen“ schaltet DXMirror unsichtbar.
 
 Musik ohne Bild: In der Musik-App (oder im Kontrollzentrum beim Audio-Player) das AirPlay-Symbol wählen
 und DXMirror als Lautsprecher auswählen.
@@ -85,4 +80,3 @@ Zweck (privat/kommerziell) zulässig ist, musst du selbst prüfen – das ist ke
 
 „AirPlay“, „iPhone“ und „iOS“ sind Marken von Apple Inc. DXMirror ist kein Apple-Produkt und wird von
 Apple weder unterstützt noch zertifiziert.
-

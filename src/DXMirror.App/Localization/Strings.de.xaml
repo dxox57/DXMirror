@@ -10,6 +10,7 @@
     <sys:String x:Key="S.Action.DownloadBonjour" xml:space="preserve">Bonjour herunterladen</sys:String>
     <sys:String x:Key="S.Action.ExportReport" xml:space="preserve">Diagnosebericht exportieren</sys:String>
     <sys:String x:Key="S.Action.Firewall" xml:space="preserve">Firewall-Regeln einrichten…</sys:String>
+    <sys:String x:Key="S.Action.FirewallShort" xml:space="preserve">Firewall einrichten</sys:String>
     <sys:String x:Key="S.Action.Fullscreen" xml:space="preserve">Vollbild</sys:String>
     <sys:String x:Key="S.Action.Mute" xml:space="preserve">Stummschalten</sys:String>
     <sys:String x:Key="S.Action.OpenFolder" xml:space="preserve">Ordner öffnen</sys:String>
@@ -41,6 +42,7 @@
     <sys:String x:Key="S.Diag.Unknown" xml:space="preserve">unbekannt</sys:String>
     <sys:String x:Key="S.Error.connection_lost" xml:space="preserve">Verbindung zum iPhone verloren – bereit für neue Verbindung.</sys:String>
     <sys:String x:Key="S.Error.gstreamer_plugin_missing" xml:space="preserve">Eine Audio-/Video-Komponente fehlt. Bitte DXMirror neu installieren.</sys:String>
+    <sys:String x:Key="S.Error.invalid_option" xml:space="preserve">Eine Einstellung wird vom Receiver nicht akzeptiert. Bitte die Einstellungen prüfen oder auf Standardwerte zurücksetzen.</sys:String>
     <sys:String x:Key="S.Error.mdns_port_blocked" xml:space="preserve">mDNS (UDP 5353) ist blockiert. Firewall-Regeln einrichten (Diagnose).</sys:String>
     <sys:String x:Key="S.Error.port_in_use" xml:space="preserve">AirPlay-Ports sind belegt – läuft bereits ein anderer AirPlay-Empfänger?</sys:String>
     <sys:String x:Key="S.Error.receiver_crashed" xml:space="preserve">Der Empfänger wurde unerwartet beendet.</sys:String>
@@ -59,7 +61,6 @@
     <sys:String x:Key="S.Field.DeviceName" xml:space="preserve">Gerätename</sys:String>
     <sys:String x:Key="S.Field.Duration" xml:space="preserve">Dauer</sys:String>
     <sys:String x:Key="S.Field.Firewall" xml:space="preserve">Firewall</sys:String>
-    <sys:String x:Key="S.Field.FixedPin" xml:space="preserve">Fester PIN (optional)</sys:String>
     <sys:String x:Key="S.Field.Heartbeats" xml:space="preserve">Verpasste Heartbeats</sys:String>
     <sys:String x:Key="S.Field.Language" xml:space="preserve">Sprache</sys:String>
     <sys:String x:Key="S.Field.LogLevel" xml:space="preserve">Log-Level</sys:String>
@@ -88,14 +89,12 @@
     <sys:String x:Key="S.Hint.Debug" xml:space="preserve">Schreibt ausführliche Protokolle (größere Log-Dateien). Authentifizierungsdaten werden nie protokolliert.</sys:String>
     <sys:String x:Key="S.Hint.DeviceName" xml:space="preserve">So erscheint der PC auf dem iPhone unter „Bildschirmsynchronisierung“.</sys:String>
     <sys:String x:Key="S.Hint.NetworkDiag" xml:space="preserve">Wird DXMirror nicht gefunden: Netzwerkprofil muss „Privat“ sein, Firewall-Regeln müssen vorhanden sein, Gast-WLANs mit Client-Isolation blockieren AirPlay.</sys:String>
-    <sys:String x:Key="S.Hint.Pin" xml:space="preserve">Beim Verbinden zeigt DXMirror einen 4-stelligen Code, den du auf dem iPhone eingibst. Ohne festen PIN wird jedes Mal ein zufälliger Code erzeugt.</sys:String>
     <sys:String x:Key="S.Hint.Quality" xml:space="preserve">Das iPhone passt Datenrate und Bildrate selbst an das Netzwerk an. DXMirror legt nur die Obergrenzen fest. Bei statischem Bildschirm sendet iOS kaum neue Bilder – das ist normal.</sys:String>
     <sys:String x:Key="S.Hint.RecordButton" xml:space="preserve">Bildschirm und Ton des iPhones als MP4 aufnehmen</sys:String>
     <sys:String x:Key="S.Hint.RecordingFolder" xml:space="preserve">Aufnahmen werden als MP4 (Bild und Ton) gespeichert. Standard: Videos\DXMirror. Beim Drehen des iPhones beginnt eine neue Datei.</sys:String>
     <sys:String x:Key="S.Hint.VolumeOnDashboard" xml:space="preserve">Lautstärke und Stummschaltung findest du direkt in der Übersicht.</sys:String>
     <sys:String x:Key="S.Idle.AudioOnly" xml:space="preserve">AirPlay-Audio wird wiedergegeben.</sys:String>
     <sys:String x:Key="S.Idle.Connecting" xml:space="preserve">iPhone verbindet sich…</sys:String>
-    <sys:String x:Key="S.Idle.EnterPin" xml:space="preserve">Gib den angezeigten Code auf deinem iPhone ein.</sys:String>
     <sys:String x:Key="S.Idle.Faulted" xml:space="preserve">Der Empfänger konnte nicht gestartet werden. Details findest du unter Diagnose.</sys:String>
     <sys:String x:Key="S.Idle.Ready" xml:space="preserve">DXMirror ist bereit. Öffne auf deinem iPhone das Kontrollzentrum und wähle Bildschirmsynchronisierung aus.</sys:String>
     <sys:String x:Key="S.Idle.Starting" xml:space="preserve">Der AirPlay-Empfänger wird gestartet…</sys:String>
@@ -146,14 +145,11 @@
     <sys:String x:Key="S.Opt.NewClientTakesOver" xml:space="preserve">Neues iPhone übernimmt bestehende Verbindung</sys:String>
     <sys:String x:Key="S.Opt.Notifications" xml:space="preserve">Benachrichtigungen anzeigen</sys:String>
     <sys:String x:Key="S.Opt.NotifyOnConnect" xml:space="preserve">Bei neuer Verbindung benachrichtigen</sys:String>
-    <sys:String x:Key="S.Opt.Pin" xml:space="preserve">Verbindungsschutz mit PIN</sys:String>
-    <sys:String x:Key="S.Opt.RememberPin" xml:space="preserve">Bekannte iPhones merken (PIN nur beim ersten Mal)</sys:String>
     <sys:String x:Key="S.Opt.ScaleFit" xml:space="preserve">Seitenverhältnis beibehalten</sys:String>
     <sys:String x:Key="S.Opt.ScaleStretch" xml:space="preserve">Fenster ausfüllen (strecken)</sys:String>
     <sys:String x:Key="S.Opt.StartReceiverOnLaunch" xml:space="preserve">Receiver beim Programmstart aktivieren</sys:String>
     <sys:String x:Key="S.Opt.StartWithWindows" xml:space="preserve">Automatisch mit Windows starten</sys:String>
     <sys:String x:Key="S.Opt.System" xml:space="preserve">Wie Windows</sys:String>
-    <sys:String x:Key="S.Pin.Title" xml:space="preserve">Diesen Code auf dem iPhone eingeben</sys:String>
     <sys:String x:Key="S.Quality.Good" xml:space="preserve">Gut</sys:String>
     <sys:String x:Key="S.Quality.Poor" xml:space="preserve">Instabil</sys:String>
     <sys:String x:Key="S.Quality.Static" xml:space="preserve">Gut (Bild unverändert)</sys:String>
@@ -166,7 +162,6 @@
     <sys:String x:Key="S.Rec.Starting" xml:space="preserve">Aufnahme wird gestartet…</sys:String>
     <sys:String x:Key="S.Rec.Waiting" xml:space="preserve">Aufnahme wartet auf ein Schlüsselbild – kurz das iPhone drehen hilft</sys:String>
     <sys:String x:Key="S.Settings.DefaultsLoaded" xml:space="preserve">Standardwerte geladen – zum Übernehmen speichern.</sys:String>
-    <sys:String x:Key="S.Settings.PinInvalid" xml:space="preserve">Der PIN muss aus genau 4 Ziffern bestehen.</sys:String>
     <sys:String x:Key="S.Settings.Saved" xml:space="preserve">Gespeichert.</sys:String>
     <sys:String x:Key="S.State.Connecting" xml:space="preserve">Verbindungsaufbau</sys:String>
     <sys:String x:Key="S.State.Faulted" xml:space="preserve">Fehler</sys:String>
@@ -203,5 +198,6 @@
     <sys:String x:Key="S.Warn.BonjourMissing" xml:space="preserve">Bonjour ist nicht installiert. Ohne Bonjour findet das iPhone diesen PC nicht. Installiere Bonjour (kostenlos von Apple) und starte DXMirror neu.</sys:String>
     <sys:String x:Key="S.Warn.BonjourNotOnAdapter" xml:space="preserve">Bonjour lauscht nicht im Netzwerk {0}. Starte den Bonjour-Dienst oder den PC neu.</sys:String>
     <sys:String x:Key="S.Warn.BonjourStopped" xml:space="preserve">Der Bonjour-Dienst läuft nicht. Starte den Dienst „Bonjour-Dienst“ (services.msc) oder den PC neu.</sys:String>
+    <sys:String x:Key="S.Warn.FirewallMissing" xml:space="preserve">Die Windows-Firewall-Regeln für DXMirror fehlen – das iPhone kann sich dann nicht verbinden. Einmal „Firewall einrichten“ klicken und die Windows-Abfrage bestätigen.</sys:String>
     <sys:String x:Key="S.Warn.OtherReceivers" xml:space="preserve">Ein anderes AirPlay-Programm läuft bereits: {0}. Das kann die Verbindung stören.</sys:String>
 </ResourceDictionary>

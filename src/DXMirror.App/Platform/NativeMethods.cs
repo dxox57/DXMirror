@@ -85,6 +85,25 @@ internal static partial class NativeMethods
     public const long WS_EX_DLGMODALFRAME = 0x00000001L;
     public const long WS_EX_WINDOWEDGE = 0x00000100L;
     public const long WS_EX_CLIENTEDGE = 0x00000200L;
+    /// <summary>Clicking the window does not activate it (keyboard focus stays with DXMirror).</summary>
+    public const long WS_EX_NOACTIVATE = 0x08000000L;
+
+    // ---------------- hotkeys (Esc/F11 in full screen, whatever window has the focus) ----------------
+    public const int WM_HOTKEY = 0x0312;
+    public const uint MOD_NOREPEAT = 0x4000;
+    public const uint VK_ESCAPE = 0x1B;
+    public const uint VK_F11 = 0x7A;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool RegisterHotKey(nint hwnd, int id, uint modifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnregisterHotKey(nint hwnd, int id);
+
+    [DllImport("user32.dll")]
+    public static extern nint GetForegroundWindow();
     public const uint SWP_NOZORDER = 0x0004;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_FRAMECHANGED = 0x0020;
@@ -180,67 +199,5 @@ internal static partial class NativeMethods
         public nuint JobMemoryLimit;
         public nuint PeakProcessMemoryUsed;
         public nuint PeakJobMemoryUsed;
-    }
-
-    // ---------------- DPAPI (protect the optional fixed PIN at rest) ----------------
-    [StructLayout(LayoutKind.Sequential)]
-    private struct DATA_BLOB
-    {
-        public int cbData;
-        public nint pbData;
-    }
-
-    [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CryptProtectData(ref DATA_BLOB dataIn, string? description, nint entropy,
-        nint reserved, nint prompt, int flags, ref DATA_BLOB dataOut);
-
-    [DllImport("crypt32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool CryptUnprotectData(ref DATA_BLOB dataIn, nint description, nint entropy,
-        nint reserved, nint prompt, int flags, ref DATA_BLOB dataOut);
-
-    [DllImport("kernel32.dll")]
-    private static extern nint LocalFree(nint mem);
-
-    private const int CRYPTPROTECT_UI_FORBIDDEN = 0x1;
-
-    public static string ProtectString(string plain)
-    {
-        var bytes = Encoding.UTF8.GetBytes(plain);
-        var result = Crypt(bytes, protect: true) ?? throw new InvalidOperationException("DPAPI protect failed");
-        return Convert.ToBase64String(result);
-    }
-
-    public static string? UnprotectString(string protectedBase64)
-    {
-        try
-        {
-            var result = Crypt(Convert.FromBase64String(protectedBase64), protect: false);
-            return result is null ? null : Encoding.UTF8.GetString(result);
-        }
-        catch (FormatException) { return null; }
-    }
-
-    private static byte[]? Crypt(byte[] data, bool protect)
-    {
-        var input = new DATA_BLOB { cbData = data.Length, pbData = Marshal.AllocHGlobal(Math.Max(1, data.Length)) };
-        var output = new DATA_BLOB();
-        try
-        {
-            Marshal.Copy(data, 0, input.pbData, data.Length);
-            bool ok = protect
-                ? CryptProtectData(ref input, "DXMirror", 0, 0, 0, CRYPTPROTECT_UI_FORBIDDEN, ref output)
-                : CryptUnprotectData(ref input, 0, 0, 0, 0, CRYPTPROTECT_UI_FORBIDDEN, ref output);
-            if (!ok) return null;
-            var result = new byte[output.cbData];
-            Marshal.Copy(output.pbData, result, 0, output.cbData);
-            return result;
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(input.pbData);
-            if (output.pbData != 0) LocalFree(output.pbData);
-        }
     }
 }

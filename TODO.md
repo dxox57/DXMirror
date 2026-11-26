@@ -1,30 +1,22 @@
 # TODO
 
-Stand: 25.11.2026 – Code vollständig geschrieben, **nicht kompiliert, nicht getestet**.
+Stand: 26.11.2026 – Version 0.3.1 (Installation pro Benutzer, PIN entfernt, Vollbild-Fix).
 
-## Erledigt
-- [x] Phase 1: Machbarkeitsanalyse, Architekturentscheidung (UxPlay 1.74, Prozess-Architektur), Projektstruktur
-- [x] Phase 2: Netzwerkmanagement, mDNS (UxPlay), Receiver-Registrierung, Verbindungsaufbau, PIN
-- [x] Phase 3: Video (D3D11/12 im eigenen Fenster), Audio (WASAPI), A/V-Sync-Optionen, Lautstärke pro App
-- [x] Phase 4: Dashboard, Einstellungen, Diagnose, Tray, Benachrichtigungen, DE/EN, Themes
-- [x] Phase 5 (Code-Ebene): Neustart mit Back-off, Job-Objekt, begrenzte Puffer, Generationszähler, Fehlerklassen
-- [x] Phase 6 (Code-Ebene): Build-Skripte, Installer-Skript, Dokumentation, Unit-Tests
+## Als Nächstes
+- [ ] 0.3.0 auf beiden PCs testen: alte Version deinstallieren, neu installieren (keine Admin-Abfrage für
+      das Setup, genau eine für die Firewall), iPhone verbinden, Sprache
+- [ ] Blockier-Warnung gezielt testen (TeamViewer starten, Bonjour-Dienst stoppen, Firewall-Regeln löschen)
+- [ ] Weitere iPhones/iPads und iOS-Versionen in TESTING.md eintragen
+- [ ] Vor öffentlicher Veröffentlichung: Signatur über SignPath Foundation (kostenlos für Open Source;
+      setzt öffentliches GitHub-Projekt und automatischen Build per GitHub Actions voraus)
+- [ ] Optional: Inno Setup auf ≥ 6.7.4 aktualisieren (`winget upgrade JRSoftware.InnoSetup`)
 
-## Als Nächstes (braucht Windows-PC bzw. iPhone)
-- [ ] `build\build.cmd` ausführen, Compile-Fehler beheben
-- [ ] Unit-Tests ausführen
-- [ ] Receiver-Selbsttest im Build prüfen (alle GStreamer-Elemente vorhanden?)
-- [ ] Manuelle iPhone-Tests 1–19 aus TESTING.md, Ergebnisse und iOS-Versionen eintragen
-- [ ] Prüfen: rendert `d3d11videosink` mit `DXMIRROR_HWND` korrekt in das eingebettete Fenster inkl. Größenänderung und Drehung
-- [ ] Prüfen: PIN-Ablauf mit `-pin` / `-reg`
-- [ ] Prüfen: Lautstärkeregelung greift auf die WASAPI-Session von `uxplay.exe`
-- [ ] Prüfen: `stats fps` entspricht tatsächlichen Frames (1 Aufruf von `video_process` = 1 Frame?)
-- [ ] Installer auf sauberer Windows-10- und Windows-11-VM testen
-
-## Später / Ideen
-- [ ] Mehrere gleichzeitige iPhones (mehrere Receiver-Instanzen mit eigener MAC/Ports, mehrere Video-Hosts)
-- [ ] GPU-Auslastung über Leistungsindikatoren „GPU Engine“
-- [ ] Verworfene Frames / Audiopuffer: zusätzliche Ereignisse im UxPlay-Patch (GStreamer-QoS-Nachrichten)
-- [ ] Code-Signierung von Installer und Binärdateien (SmartScreen)
-- [ ] Automatische Updates (nur mit Zustimmung)
-- [ ] Optional MSIX-Paket
+## Erledigt (0.1.0 → 0.3.0)
+- [x] Build (MSYS2/GStreamer 1.28.9, .NET 10), Unit-Tests, Installer
+- [x] Erkennung über Bonjour, Spiegelung mit Ton, eingebettetes Video, Lautstärke, geringe Latenz
+- [x] Umbenennung in DXMirror, Tray-Schalter, Auswahllisten
+- [x] Aufnahme als MP4 mit Ton, Hinweis „Aufnahme gespeichert“
+- [x] Blockier-Warnung mit Bonjour-Download und Firewall-Knopf
+- [x] Installer zweisprachig, App übernimmt Installer-Sprache, Installation ohne Admin-Rechte
+- [x] OBS-Ausgabe und PIN ausprobiert und wieder entfernt
+- Diagnosebericht des Kollegen: `diagnose-berichte/DXMirror-Diagnose-20261126-011433-Kollege.zip`

@@ -24,6 +24,9 @@ public sealed class VideoHost : HwndHost
 
     public bool HasVideoWindow => _video != 0 && NativeMethods.IsWindow(_video);
 
+    /// <summary>The receiver's video window while attached, otherwise 0.</summary>
+    public nint VideoWindow => HasVideoWindow ? _video : 0;
+
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
         var hwnd = NativeMethods.CreateWindowEx(
@@ -75,6 +78,9 @@ public sealed class VideoHost : HwndHost
         var ex = (long)NativeMethods.GetWindowLongPtr(found, NativeMethods.GWL_EXSTYLE);
         ex &= ~(NativeMethods.WS_EX_APPWINDOW | NativeMethods.WS_EX_DLGMODALFRAME
                 | NativeMethods.WS_EX_WINDOWEDGE | NativeMethods.WS_EX_CLIENTEDGE);
+        // a click into the video must not take the keyboard away from DXMirror (Esc/F11 in full screen),
+        // and UxPlay's own Alt+Enter full screen must not be reachable
+        ex |= NativeMethods.WS_EX_NOACTIVATE;
         NativeMethods.SetWindowLongPtr(found, NativeMethods.GWL_EXSTYLE, (nint)ex);
 
         // owned by the DXMirror main window: always above it, minimised/restored with it

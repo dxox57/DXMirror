@@ -47,6 +47,7 @@ public partial class DashboardView : UserControl
     }
 
     public nint VideoHandle => Video.VideoHandle;
+    public nint VideoWindowHandle => Video.VideoWindow;
 
     private void Attach(MainViewModel? vm)
     {

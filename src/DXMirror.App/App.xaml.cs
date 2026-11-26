@@ -28,13 +28,36 @@ public partial class App : Application
             return;
         }
 
-        // Installer hook (runs as the original, non-elevated user): "DXMirror.exe --set-autostart"
+        // Installer hooks for the firewall rules (per-user install: DXMirror itself is never elevated,
+        // only "cmd /c netsh ..." through one UAC prompt, see FirewallService)
+        if (e.Args.Contains("--setup-firewall") || e.Args.Contains("--remove-firewall"))
+        {
+            int code = 0;
+            try
+            {
+                var exe = AppPaths.ReceiverExe;
+                if (e.Args.Contains("--setup-firewall"))
+                {
+                    if (await FirewallService.GetStatusAsync(exe) != FirewallStatus.RulesPresent)
+                        code = await FirewallService.InstallRulesAsync(exe) ? 0 : 1;
+                }
+                else if (await FirewallService.GetStatusAsync(exe) == FirewallStatus.RulesPresent)
+                {
+                    code = await FirewallService.RemoveRulesAsync() ? 0 : 1;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException) { code = 1; }
+            Shutdown(code);
+            return;
+        }
+
+        // Installer hook: "DXMirror.exe --set-autostart"
         if (e.Args.Contains("--set-autostart"))
         {
             try
             {
                 AutostartService.SetEnabled(true);
-                var store = new Core.Settings.SettingsStore(AppPaths.SettingsFile, Platform.NativeMethods.ProtectString, Platform.NativeMethods.UnprotectString);
+                var store = new Core.Settings.SettingsStore(AppPaths.SettingsFile);
                 var s = store.Load();
                 s.StartWithWindows = true;
                 store.Save(s);

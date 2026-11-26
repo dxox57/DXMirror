@@ -7,12 +7,12 @@
 | Bereich | Tests |
 |---|---|
 | Protokoll zum Receiver | Parser für `@@DXM`-Ereignisse inkl. fehlerhafter/überlanger/manipulierter Zeilen |
-| Sitzungszustand | kompletter Spiegelungsablauf, Hoch-/Querformat-Wechsel, Audio-only, PIN, abgelehnter Client, Verbindungs-Reset, unplausible Werte |
+| Sitzungszustand | kompletter Spiegelungsablauf, Hoch-/Querformat-Wechsel, Audio-only, abgelehnter Client, Verbindungs-Reset, unplausible Werte |
 | Receiver-Optionen | Erzeugung der UxPlay-Startdatei für alle Einstellungen, Quoting, Schutz vor Pipeline-Injection über die Audio-Geräte-ID, Optionen unbekannter UxPlay-Versionen |
 | Prozesssteuerung | Start/Stopp mit Fake-Prozess, `quit` und Kill-Fallback, Ressourcenfreigabe, automatischer Neustart, Fehlerklassifizierung, verworfene Ereignisse alter Prozesse, fehlende Binärdatei |
-| Einstellungen | Validierung/Grenzwerte, Gerätenamen, PIN-Regeln, atomares Speichern, verschlüsselter PIN, defekte Datei |
+| Einstellungen | Validierung/Grenzwerte, Gerätenamen, atomares Speichern, defekte Datei |
 | Netzwerk | Adapter-Klassifizierung (WLAN/LAN/VPN/virtuell), automatische und manuelle Auswahl, Fallback, private Adressen |
-| Logging/Diagnose | Schwärzung von PIN/Passwort/Schlüsseln, begrenzter Speicher, Logdatei, Diagnose-ZIP ohne PIN |
+| Logging/Diagnose | Schwärzung von PIN/Passwort/Schlüsseln, begrenzter Speicher, Logdatei, Diagnose-ZIP |
 | Neustart-Strategie | Back-off, Aufgeben, Zurücksetzen nach stabiler Laufzeit |
 
 Der Build-Selbsttest in `build-uxplay.sh` prüft zusätzlich, dass alle GStreamer-Elemente aus dem Bundle
@@ -34,7 +34,13 @@ ohne MSYS2 im `PATH` geladen werden können.
 | 25.11.2026 | Verzögerung mit -vsync / 250 ms | ~0,5 s+; ohne Sync, 100 ms Puffer: ~0,5 s, Bild/Ton synchron ✅ |
 | 25.11.2026 | Aufnahme (MP4), Umbenennung DXMirror | ✅ nach Korrekturen (Plugins, AAC-LC statt AAC-ELD): Bild und Ton im Medienplayer |
 | 26.11.2026 | OBS-Ausgabe (SRT) | ❌ OBS zeigte kein Bild → Funktion wieder entfernt |
-| 26.11.2026 | Blockier-Warnung, Installer mit eigener Admin-Abfrage, Installer-Sprache → App | ⏳ noch nicht getestet |
+| 26.11.2026 | Installer: Admin-Abfrage (Inno 6.7.3, RedirectionGuard aus), Sprache DE/EN | ✅ auf dem Entwickler-PC; beim Kollegen mehrfaches „Ja“ nötig → eigene Neustart-Lösung ersetzt durch Inno-eigene Abfrage + SetupMutex ⏳ |
+| 26.11.2026 | Zweiter PC (Kollege): Windows 11 Build 26300, iPhone 15 Pro Max (iPhone16,2), WLAN | ✅ Erkennung, Spiegelung, Ton, Lautstärke, Aufnahme |
+| 26.11.2026 | Installer 0.2.1-Vorabstand (Inno-eigene Abfrage) | ❌ erst „muss als Administrator ausgeführt werden“, beim 3. Start Abfrage → Starter mit `requireAdministrator` ⏳ |
+| 26.11.2026 | Fester PIN | ❌ Receiver startete nicht („unknown option -pin1234“), nach Korrektur weiter Probleme beim Kollegen → PIN-Funktion in 0.3.0 entfernt |
+| 26.11.2026 | Installer mit `requireAdministrator`-Starter | ❌ beim Kollegen „write installer – Zugriff verweigert (5)“ (vermutlich Norton) → 0.3.0: Installation pro Benutzer ohne Admin-Rechte ⏳ |
+| 26.11.2026 | Blockier-Warnung | ⏳ noch nicht gezielt getestet (z. B. mit TeamViewer) |
+| 26.11.2026 | Vollbild verlassen nach Klick ins Video | ❌ keine Taste wirkte → 0.3.1: Video-Fenster nicht aktivierbar, Esc/F11 als Hotkeys im Vollbild ⏳ |
 
 Getestet mit einem iPhone 16 Pro (siehe Tabelle). Andere Modelle und iOS-Versionen sind noch nicht geprüft.
 
@@ -55,7 +61,7 @@ Bei jedem Fehler: **Diagnose → Diagnosebericht exportieren** und ZIP beilegen.
 | # | Szenario | Schritte | Erwartung |
 |---|---|---|---|
 | 1 | Erkennung | DXMirror starten, iPhone: Kontrollzentrum → Bildschirmsynchronisierung | „DXMirror – <PC>“ erscheint innerhalb ~5 s |
-| 2 | Verbindung | Eintrag antippen (mit PIN-Schutz: Code eingeben) | Status „Verbunden“, Gerätename und Dauer sichtbar |
+| 2 | Verbindung | Eintrag antippen | Status „Verbunden“, Gerätename und Dauer sichtbar |
 | 3 | Spiegelung | iPhone-Startbildschirm, Apps öffnen, scrollen | Bild im Fenster, flüssig, keine Artefakte; FPS > 0 bei Bewegung |
 | 4 | Ton | YouTube/Video mit Ton oder Spiel abspielen | Ton aus dem gewählten Windows-Gerät |
 | 5 | Synchronität | Video mit sichtbarem Sprecher / Klatschen | kein wahrnehmbarer Versatz (sonst „Ton-Verzögerung“ anpassen und notieren) |
@@ -93,5 +99,5 @@ Bei jedem Fehler: **Diagnose → Diagnosebericht exportieren** und ZIP beilegen.
 - Geschützte Inhalte (DRM, z. B. manche Streaming-Apps) werden von iOS nicht oder nur schwarz gespiegelt –
   das ist beabsichtigt und wird nicht umgangen.
 - Deinstallation: Autostart-Eintrag und Datenordner werden für den Benutzer entfernt, der die
-  Deinstallation ausführt (bei Admin-Konto mit anderem Benutzer ggf. manuell).
+  Deinstallation ausführt (Installation ist ohnehin pro Benutzer).
 - YouTube-HLS-Weitergabe von UxPlay (`-hls`) ist nicht aktiviert.

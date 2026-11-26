@@ -244,7 +244,6 @@ public sealed class MainViewModel : ObservableObject
     public bool ShowVideo => IsStreaming && _snapshot.Kind == StreamKind.ScreenMirroring
                              && _host.Settings.EmbedVideo && !_host.Settings.AudioOnlyMode;
     public bool ShowIdlePanel => !ShowVideo;
-    public bool ShowPin => !string.IsNullOrEmpty(PendingPin);
 
     private string _statusTitle = "";
     public string StatusTitle { get => _statusTitle; private set => Set(ref _statusTitle, value); }
@@ -280,7 +279,6 @@ public sealed class MainViewModel : ObservableObject
         : "–";
     public string AudioStatus => _snapshot.AudioActive ? Loc.Format("Audio.Active", _snapshot.AudioFormat ?? "?") : Loc.Get("Audio.Inactive");
     public string StreamKindText => Loc.Get("Kind." + _snapshot.Kind);
-    public string? PendingPin => _snapshot.PendingPin;
     public string Quality
     {
         get
@@ -309,6 +307,10 @@ public sealed class MainViewModel : ObservableObject
     public bool ShowDiscoveryWarning => _discoveryWarning.Length > 0;
     private bool _bonjourMissing;
     public bool BonjourMissing { get => _bonjourMissing; private set => Set(ref _bonjourMissing, value); }
+    private bool _firewallMissing;
+    /// <summary>Firewall rules for the receiver are missing: the warning banner offers to create them.</summary>
+    public bool FirewallMissing { get => _firewallMissing; private set => Set(ref _firewallMissing, value); }
+    private string ReceiverExePath => _host.Settings.CustomUxPlayPath ?? AppPaths.ReceiverExe;
     public ICommand BonjourDownloadCommand => new RelayCommand(() =>
         Process.Start(new ProcessStartInfo(NetworkConflicts.BonjourDownloadUrl) { UseShellExecute = true }));
     private int _secondsSinceCheck = 1000;
@@ -323,8 +325,15 @@ public sealed class MainViewModel : ObservableObject
             var ip = _host.CurrentAdapter?.PrimaryIPv4;
             var r = await Task.Run(() => NetworkConflicts.Check(ip));
             BonjourMissing = !r.BonjourInstalled;
+            // checked once per start (and after "set up"): netsh is cheap, but there is no need to poll it
+            if (!_firewallChecked)
+            {
+                FirewallMissing = await FirewallService.GetStatusAsync(ReceiverExePath) == FirewallStatus.RulesMissing;
+                _firewallChecked = true;
+            }
             string text;
             if (!r.BonjourInstalled) text = Loc.Get("Warn.BonjourMissing");
+            else if (FirewallMissing) text = Loc.Get("Warn.FirewallMissing");
             else if (!r.BonjourRunning) text = Loc.Get("Warn.BonjourStopped");
             else if (!r.BonjourOnAdapter && r.Blockers.Count > 0) text = Loc.Format("Warn.Blocked", string.Join(", ", r.Blockers));
             else if (!r.BonjourOnAdapter) text = Loc.Format("Warn.BonjourNotOnAdapter", ip ?? "?");
@@ -415,7 +424,7 @@ public sealed class MainViewModel : ObservableObject
         IdleMessage = s.State switch
         {
             ReceiverState.Ready => Loc.Get("Idle.Ready"),
-            ReceiverState.Connecting => s.PendingPin is null ? Loc.Get("Idle.Connecting") : Loc.Get("Idle.EnterPin"),
+            ReceiverState.Connecting => Loc.Get("Idle.Connecting"),
             ReceiverState.Streaming when s.Kind == StreamKind.AudioOnly => Loc.Get("Idle.AudioOnly"),
             ReceiverState.Streaming => Loc.Get("Idle.VideoExternal"),
             ReceiverState.Starting => Loc.Get("Idle.Starting"),
@@ -449,7 +458,7 @@ public sealed class MainViewModel : ObservableObject
                      nameof(IsRunning), nameof(HasClient), nameof(IsStreaming), nameof(ShowVideo), nameof(ShowIdlePanel),
                      nameof(ServiceStatus), nameof(ReceiverVersion), nameof(ClientName), nameof(ClientModel),
                      nameof(ConnectionStatus), nameof(Resolution), nameof(Codec), nameof(Fps), nameof(Bitrate),
-                     nameof(AudioStatus), nameof(StreamKindText), nameof(PendingPin), nameof(ShowPin), nameof(Quality),
+                     nameof(AudioStatus), nameof(StreamKindText), nameof(Quality),
                      nameof(MissedHeartbeats), nameof(DeviceName),
                  })
         {
@@ -546,19 +555,23 @@ public sealed class MainViewModel : ObservableObject
     private async Task RefreshDiagnosticsAsync()
     {
         FirewallText = Loc.Get("Diag.Checking");
-        var fw = await FirewallService.GetStatusAsync();
+        var fw = await FirewallService.GetStatusAsync(ReceiverExePath);
         FirewallText = Loc.Get("Firewall." + fw);
         NetworkProfileText = await NetworkProfile.QueryAsync() is { Length: > 0 } p ? p : Loc.Get("Diag.Unknown");
         await SampleMetricsAsync();
     }
 
+    private bool _firewallChecked;
+
     private async Task SetupFirewallAsync()
     {
         var answer = MessageBox.Show(Loc.Get("Firewall.Explain"), "DXMirror", MessageBoxButton.OKCancel, MessageBoxImage.Information);
         if (answer != MessageBoxResult.OK) return;
-        var ok = await FirewallService.InstallRulesAsync(_host.Settings.CustomUxPlayPath ?? AppPaths.ReceiverExe);
+        var ok = await FirewallService.InstallRulesAsync(ReceiverExePath);
         _host.Log.Info("Firewall", ok ? "Firewall rules created (private networks only)." : "Firewall rules were not created (cancelled or failed).");
+        _firewallChecked = false;
         await RefreshDiagnosticsAsync();
+        await RunDiscoveryCheckAsync();
     }
 
     private async Task ExportDiagnosticsAsync()
@@ -576,7 +589,7 @@ public sealed class MainViewModel : ObservableObject
             ["UxPlay:"] = ReceiverVersion,
             ["Receiver:"] = File.Exists(AppPaths.ReceiverExe) ? AppPaths.ReceiverExe : "missing",
             ["State:"] = State.ToString(),
-            ["Firewall:"] = (await FirewallService.GetStatusAsync()).ToString(),
+            ["Firewall:"] = (await FirewallService.GetStatusAsync(ReceiverExePath)).ToString(),
             ["NetProfile:"] = await NetworkProfile.QueryAsync(),
             ["AudioDevs:"] = string.Join(" ; ", AudioEndpoints.GetOutputDevices().Select(d => d.Name + (d.IsDefault ? " (default)" : ""))),
         };
