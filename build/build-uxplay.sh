@@ -12,7 +12,6 @@
 set -euo pipefail
 
 UXPLAY_REPO="https://github.com/FDH2/UxPlay.git"
-UXPLAY_VERSION="1.74"
 UXPLAY_COMMIT="fbd040e70e754e01fa7e6df810fecd08b6484ada"   # UxPlay 1.74, 2026-11-23
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK="$ROOT/build/work"
@@ -136,26 +135,6 @@ while ((${#queue[@]})); do
 done
 echo "    ${#SEEN[@]} DLLs bundled"
 
-echo "==> Recording the native packages actually shipped"
-runtime_inventory="$STAGE/licenses/native-inventory.tsv"
-printf 'UxPlay\t%s\t%s\n' "$UXPLAY_VERSION" "$UXPLAY_COMMIT" > "$runtime_inventory"
-{
-  for file in "$STAGE"/bin/* "$STAGE"/lib/gstreamer-1.0/*.dll; do
-    case "$file" in
-      */bin/uxplay.exe) continue ;;
-      */bin/gst-plugin-scanner.exe) original="$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" ;;
-      *) original="$PREFIX/${file#"$STAGE"/}" ;;
-    esac
-    owner="$(pacman -Qqo "$original")"
-    read -r package version <<< "$(pacman -Q "$owner")"
-    base="$(awk '/^%BASE%$/ { getline; print; exit }' "/var/lib/pacman/local/$package-$version/desc")"
-    if [[ -z "$base" ]]; then
-      base="${package/mingw-w64-ucrt-x86_64-/mingw-w64-}"
-    fi
-    printf '%s\t%s\t%s\n' "$package" "$base" "$version"
-  done
-} | sort -u >> "$runtime_inventory"
-
 echo "==> Licenses"
 cp "$WORK/UxPlay/LICENSE" "$STAGE/licenses/UxPlay-GPL-3.0.txt"
 for pkg in gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-libav ffmpeg openssl libplist glib2; do
@@ -189,11 +168,37 @@ for element in appsrc queue h264parse h265parse decodebin avdec_h264 avdec_aac a
     case "$element" in d3d11h264dec|d3d12videosink) ;; *) missing=1 ;; esac   # GPU-specific elements may be absent on build PCs
   fi
 done
-PATH="$ISOLATED_PATH" "$STAGE/bin/uxplay.exe" -v | head -n 2
+version_output="$(PATH="$ISOLATED_PATH" "$STAGE/bin/uxplay.exe" -v)"
+printf '%s\n' "$version_output"
+uxplay_version="$(sed -n 's/^UxPlay version \([0-9.]*\);.*/\1/p' <<< "$version_output")"
+if [[ ! "$uxplay_version" =~ ^[0-9]+(\.[0-9]+){1,3}$ ]]; then
+  echo "ERROR: could not determine the bundled UxPlay version." >&2
+  exit 1
+fi
 if (( missing )); then
   echo "ERROR: required GStreamer elements are missing from the bundle." >&2
   exit 1
 fi
+
+echo "==> Recording the native packages actually shipped"
+runtime_inventory="$STAGE/licenses/native-inventory.tsv"
+printf 'UxPlay\t%s\t%s\n' "$uxplay_version" "$UXPLAY_COMMIT" > "$runtime_inventory"
+{
+  for file in "$STAGE"/bin/* "$STAGE"/lib/gstreamer-1.0/*.dll; do
+    case "$file" in
+      */bin/uxplay.exe) continue ;;
+      */bin/gst-plugin-scanner.exe) original="$PREFIX/libexec/gstreamer-1.0/gst-plugin-scanner.exe" ;;
+      *) original="$PREFIX/${file#"$STAGE"/}" ;;
+    esac
+    owner="$(pacman -Qqo "$original")"
+    read -r package version <<< "$(pacman -Q "$owner")"
+    base="$(awk '/^%BASE%$/ { getline; print; exit }' "/var/lib/pacman/local/$package-$version/desc")"
+    if [[ -z "$base" ]]; then
+      base="${package/mingw-w64-ucrt-x86_64-/mingw-w64-}"
+    fi
+    printf '%s\t%s\t%s\n' "$package" "$base" "$version"
+  done
+} | sort -u >> "$runtime_inventory"
 
 du -sh "$STAGE"
 echo "==> Receiver ready: $STAGE"
