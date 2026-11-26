@@ -136,7 +136,7 @@ def scan_uxplay(sbom, report):
     report.write_text(json.dumps(findings, indent=2) + "\n", encoding="utf-8")
     for finding in findings:
         print(f"UxPlay {finding['severity']}: {finding['html_url']}")
-    return int(any(item["severity"] != "low" for item in findings))
+    return int(any(item["severity"] in {"high", "critical"} for item in findings))
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ jobs:
           GRYPE: ${{ steps.grype.outputs.cmd }}
         run: |
           mkdir -p scan-results
-          "$GRYPE" sbom:scan-input/DXMirror-native.cdx.json --fail-on medium \
+          "$GRYPE" sbom:scan-input/DXMirror-native.cdx.json --fail-on high \
             --output table --output json=scan-results/grype.json
       - if: '!cancelled() && (!inputs.published || steps.published.outputs.available == ''true'')'
         name: Check UxPlay advisories

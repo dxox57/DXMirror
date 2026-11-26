@@ -66,7 +66,8 @@ SHA-256 bleiben erhalten. Bei abweichendem SHA-256 meldet der Job einen Konflikt
 ## Sicherheitsprüfungen in GitHub Actions
 
 - Pull Requests und Pushes auf `main` bauen den Installer und prüfen NuGet sowie die
-  mitgelieferten nativen Komponenten. CVEs ab mittel lassen den Check fehlschlagen.
+  mitgelieferten nativen Komponenten. NuGet blockiert ab mittel. Der native Scan blockiert
+  nur hohe und kritische Befunde und zeigt mittlere Befunde weiterhin im Bericht.
 - Dependency Review prüft neue Abhängigkeiten in Pull Requests. CodeQL meldet mögliche Probleme
   in C# und GitHub-Actions-Workflows im Security-Tab. Dependabot öffnet Update-PRs für NuGet und Actions.
 - Die native SBOM enthält das Bundling-Inventar aus MSYS2 sowie Version und Commit von UxPlay.
