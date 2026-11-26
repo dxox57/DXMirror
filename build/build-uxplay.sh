@@ -45,9 +45,10 @@ pacman_install \
 echo "==> Fetching UxPlay $UXPLAY_COMMIT"
 mkdir -p "$WORK"
 if [[ ! -d "$WORK/UxPlay/.git" ]]; then
-  git clone "$UXPLAY_REPO" "$WORK/UxPlay"
+  git clone -c core.autocrlf=false "$UXPLAY_REPO" "$WORK/UxPlay"
 fi
 cd "$WORK/UxPlay"
+git config core.autocrlf false
 git fetch --quiet origin
 git reset --hard --quiet
 git clean -fdxq
