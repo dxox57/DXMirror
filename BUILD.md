@@ -54,9 +54,9 @@ cd /c/Users/<du>/Documents/DXMirror
 
 ## Release erstellen
 
-1. Bei einer neuen Version <Version> in der App-Projektdatei und den Changelog aktualisieren.
-2. Einen GitHub-Release mit Tag vX.Y.Z veröffentlichen. Der Tag muss auf den gewünschten Commit mit der passenden Projektversion und dem Workflow zeigen.
-3. Nach erfolgreichem Windows-Build, Tests und CVE-Scan erscheinen beim Release die Installer-EXE, SHA256.txt, Quellarchive für DXMirror inklusive Patch und den gepinnten UxPlay-Stand, Lizenztext und native SBOM. Der Build und ein erneuter Lauf sind unter Actions einsehbar.
+1. Bei einer neuen Version `<Version>` in der App-Projektdatei und den Changelog aktualisieren.
+2. Einen GitHub-Release mit Tag `vX.Y.Z` veröffentlichen. Der Tag muss auf den gewünschten Commit mit der passenden Projektversion und dem Workflow zeigen.
+3. Nach erfolgreichem Windows-Build, Tests und CVE-Scan erscheinen beim Release die Installer-EXE, `SHA256.txt`, Quellarchive für DXMirror inklusive Patch und den gepinnten UxPlay-Stand, Lizenztext und native SBOM. Der Build und ein erneuter Lauf sind unter Actions einsehbar.
 4. Installer auf einem sauberen Windows mit echtem AirPlay-Gerät nach [TESTING.md](TESTING.md) prüfen.
 
 Der Upload setzt einen Release voraus, dessen Assets nach Veröffentlichung bearbeitet werden dürfen.
@@ -65,7 +65,7 @@ SHA-256 bleiben erhalten. Bei abweichendem SHA-256 meldet der Job einen Konflikt
 
 ## Sicherheitsprüfungen in GitHub Actions
 
-- Pull Requests und Pushes auf main bauen den Installer und prüfen NuGet sowie die
+- Pull Requests und Pushes auf `main` bauen den Installer und prüfen NuGet sowie die
   mitgelieferten nativen Komponenten. CVEs ab mittel lassen den Check fehlschlagen.
 - Dependency Review prüft neue Abhängigkeiten in Pull Requests. CodeQL meldet mögliche Probleme
   in C# und GitHub-Actions-Workflows im Security-Tab. Dependabot öffnet Update-PRs für NuGet und Actions.
@@ -76,3 +76,6 @@ SHA-256 bleiben erhalten. Bei abweichendem SHA-256 meldet der Job einen Konflikt
   Release. Bis zum ersten Release mit SBOM meldet der Lauf, dass dieses Artefakt noch fehlt.
 - Der Windows-Workflow kann manuell zur Vorschau gestartet werden. Der Installer erscheint dabei
   als Actions-Artefakt. Der Upload läuft beim Veröffentlichen eines GitHub-Releases.
+
+Für Dependency Review muss ein Repository-Admin unter **Settings → Advanced Security**
+den **Dependency graph** aktivieren. GitHub kann den Check ohne diese Einstellung mit HTTP 403 ablehnen.
