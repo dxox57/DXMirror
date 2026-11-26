@@ -2,39 +2,38 @@
 
 ## 0.2.0 – 2026-11-25
 
-### Neue Funktionen
-- Umbenennung in **DXMirror** (Programm, Installer, Datenordner %LOCALAPPDATA%\DXMirror; Einstellungen und Geräteschlüssel werden einmalig übernommen)
-- Aufnahme-Knopf in der Übersicht: MP4 mit Bild und Ton, Speicherort in den Einstellungen (Standard: Videos\DXMirror)
-- Lautstärke/Stumm direkt im Receiver (GStreamer), kombiniert mit der iPhone-Lautstärke
-- Niedrigere Verzögerung als Standard (A/V-Sync per Zeitstempel aus, 100 ms Audiopuffer)
-- Installer fragt selbst per Windows-Abfrage nach Administratorrechten (statt Fehlermeldung) und bietet Deutsch/Englisch an; die gewählte Sprache übernimmt DXMirror, solange in den Einstellungen „Automatisch“ eingestellt ist
-- **Blockier-Warnung** (ungetestet): Übersicht und Diagnose zeigen einen Hinweis, wenn Bonjour fehlt/nicht läuft, ein anderes Programm (z. B. TeamViewer) den Erkennungs-Port 5353 belegt oder ein anderer AirPlay-Empfänger läuft; bei fehlendem Bonjour mit Download-Knopf
+### New features
+- Renamed the application to **DXMirror** (application, installer, and data folder `%LOCALAPPDATA%\DXMirror`; settings and device keys are migrated once)
+- Added a recording button to the dashboard: records video and audio as MP4; save location can be set in Settings (default: `Videos\DXMirror`)
+- Added volume and mute controls directly in the receiver (GStreamer), combined with the iPhone’s volume
+- Reduced default latency (timestamp-based A/V sync disabled, 100 ms audio buffer)
+- The installer now requests administrator permission through a Windows prompt instead of showing an error, and offers German and English; DXMirror uses the selected language while the language setting is set to “Automatic”
+- **Blocking warning** (untested): the dashboard and Diagnostics show a warning if Bonjour is missing or not running, another program (e.g. TeamViewer) is using discovery port 5353, or another AirPlay receiver is running; includes a download button when Bonjour is missing
 
-### Fehlerbehebungen
-- iPhone fand den PC nicht: Erkennung über Apple Bonjour statt experimentellem UxPlay-mDNS
-- Graue Videofläche: Video-Fenster des Receivers wird passgenau über die Fläche gelegt
-- Auswahllisten zeigten „Option { Value = … }“
-- Minimieren in den Infobereich ist jetzt standardmäßig aus (Schalter in den Einstellungen)
-- Build: PowerShell-Kodierung, pacman-Wiederholung bei Fehler 429, fehlendes System.IO, doppelte catch-Klausel
+### Bug fixes
+- iPhone could not find the PC: switched discovery to Apple Bonjour instead of experimental UxPlay mDNS
+- Gray video area: the receiver’s video window is now positioned to fit the display area
+- Fixed option lists displaying “Option { Value = … }”
+- Minimize to the system tray is now off by default (can be changed in Settings)
+- Build fixes: PowerShell encoding, retrying pacman after error 429, missing `System.IO`, and a duplicate catch clause
 
-## 0.1.0 – 2026-11-25 (Entwicklungsstand, ungetestet)
+## 0.1.0 – 2026-11-25 (development version, untested)
 
-### Neue Funktionen
-- AirPlay-Receiver auf Basis von UxPlay 1.74 (Commit `fbd040e`) als separater, überwachter Prozess
-- DXMirror-Patch für UxPlay: maschinenlesbare Statusereignisse, Steuerkanal (stdin), Rendering in ein
-  fremdes Fenster, wählbarer mDNS-Adapter, PIN nicht in der Konsole
-- iPhone-Bildschirmsynchronisierung mit Ton, AirPlay-Audio, optionaler Nur-Audio-Modus
-- Video im DXMirror-Fenster (Direct3D 11/12), Vollbild (F11/Esc), Hardware-Decodierung mit Software-Fallback
-- WASAPI-Ausgabegerät, App-eigene Lautstärke/Stummschaltung, A/V-Sync-Feinjustierung, Audiolatenz
-- Dashboard mit Empfänger-, Verbindungs- und Stream-Status; Einstellungen in 5 Kategorien
-- Netzwerkadapter-Erkennung (WLAN/LAN/VPN/virtuell), automatische oder manuelle Auswahl, Reaktion auf Netzwerkwechsel
-- Optionaler PIN-Schutz (zufällig oder fest, DPAPI-verschlüsselt gespeichert), bekannte iPhones merken
-- Firewall-Regeln (programmgebunden, nur privat) per Setup oder Diagnose-Seite mit Zustimmung
-- Tray-Symbol mit Menü, Benachrichtigungen, Autostart, Einzelinstanz
-- Deutsch/Englisch, Hell/Dunkel/System
-- Logging mit Rotation und Schwärzung, Ressourcenanzeige, Netzwerkdiagnose, Diagnose-ZIP
-- Unit-Tests für Core-Bibliothek
-- Build-Skripte (MSYS2 + .NET) mit Bundle-Selbsttest, Inno-Setup-Installer mit sauberer Deinstallation
+### New features
+- AirPlay receiver based on UxPlay 1.74 (commit `fbd040e`) running as a separate, supervised process
+- DXMirror patch for UxPlay: machine-readable status events, control channel (stdin), rendering inside another window, selectable mDNS adapter, and PIN hidden from the console
+- iPhone screen mirroring with audio, AirPlay audio, and optional audio-only mode
+- Video displayed in the DXMirror window (Direct3D 11/12), full screen (F11/Esc), hardware decoding with software fallback
+- WASAPI output device, app-specific volume and mute controls, A/V sync adjustment, and audio latency settings
+- Dashboard showing receiver, connection, and stream status; settings organized into five categories
+- Network adapter detection (Wi-Fi/LAN/VPN/virtual), automatic or manual selection, and response to network changes
+- Optional PIN protection (random or fixed, stored encrypted with DPAPI); remembers known iPhones
+- Per-application Windows Firewall rules, limited to private networks, configurable through the installer or Diagnostics with user consent
+- System tray icon and menu, notifications, auto-start, and single-instance support
+- German/English and light/dark/system themes
+- Rotating logs with sensitive data redaction, resource monitor, network diagnostics, and diagnostic ZIP export
+- Unit tests for the Core library
+- Build scripts (MSYS2 + .NET) with bundle self-test, Inno Setup installer, and clean uninstall
 
-### Fehlerbehebungen
-- –
+### Bug fixes
+- None
