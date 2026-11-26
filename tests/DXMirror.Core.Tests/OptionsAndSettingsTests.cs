@@ -5,7 +5,7 @@ namespace DXMirror.Core.Tests;
 
 public class UxPlayStartupFileTests
 {
-    private static readonly ReceiverPaths Paths = new(@"C:\Data\key.pem", @"C:\Data\reg.txt", @"C:\Data\uxplay.rc");
+    private static readonly ReceiverPaths Paths = new(@"C:\Data\key.pem", @"C:\Data\uxplay.rc");
 
     private static IReadOnlyList<string> Build(AppSettings s) =>
         UxPlayStartupFile.BuildOptionLines(s.Normalize(), Paths, UxPlayCapabilities.Assume174());
@@ -46,22 +46,6 @@ public class UxPlayStartupFileTests
     {
         var lines = Build(new AppSettings { AudioOutputDeviceId = "x\" ! filesink location=evil" });
         Assert.Contains("as wasapisink", lines);
-    }
-
-    [Fact]
-    public void Fixed_pin_uses_attached_syntax_and_register()
-    {
-        var lines = Build(new AppSettings { PinEnabled = true, FixedPin = "1234", RememberPinClients = true });
-        Assert.Contains("pin1234", lines);
-        Assert.Contains(@"reg C:\Data\reg.txt", lines);
-    }
-
-    [Fact]
-    public void Random_pin_without_register()
-    {
-        var lines = Build(new AppSettings { PinEnabled = true, FixedPin = null, RememberPinClients = false });
-        Assert.Contains("pin", lines);
-        Assert.DoesNotContain(lines, l => l.StartsWith("reg", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -180,7 +164,7 @@ public class SettingsTests
         {
             MaxWidth = 99999, MaxHeight = 1, MaxFps = 144, Volume = double.NaN, AudioLatencyMs = 1,
             AvSyncOffsetMs = 99999, ConnectionTimeoutSeconds = -5, Theme = "neon", Language = "fr",
-            FixedPin = "12a4", VideoRenderer = "opengl", Scaling = "zoom", LogLevel = "trace",
+            VideoRenderer = "opengl", Scaling = "zoom", LogLevel = "trace",
         }.Normalize();
         Assert.Equal(3840, s.MaxWidth);
         Assert.Equal(240, s.MaxHeight);
@@ -191,7 +175,6 @@ public class SettingsTests
         Assert.Equal(0, s.ConnectionTimeoutSeconds);
         Assert.Equal("system", s.Theme);
         Assert.Equal("auto", s.Language);
-        Assert.Null(s.FixedPin);
         Assert.Equal("d3d11", s.VideoRenderer);
         Assert.Equal("fit", s.Scaling);
         Assert.Equal("info", s.LogLevel);
@@ -220,29 +203,17 @@ public class SettingsTests
         Assert.StartsWith("DXMirror", DeviceNameRules.Sanitize("   "));
     }
 
-    [Theory]
-    [InlineData("1234", true)]
-    [InlineData("0000", true)]
-    [InlineData("123", false)]
-    [InlineData("12345", false)]
-    [InlineData("12a4", false)]
-    [InlineData(null, false)]
-    public void Pin_rules(string? pin, bool valid) => Assert.Equal(valid, PinRules.IsValid(pin));
-
     [Fact]
-    public void Store_round_trips_and_protects_pin()
+    public void Store_round_trips()
     {
         var dir = Directory.CreateTempSubdirectory();
         try
         {
             var file = Path.Combine(dir.FullName, "settings.json");
-            var store = new SettingsStore(file, p => "ENC" + new string(p.Reverse().ToArray()), c => c.StartsWith("ENC") ? new string(c[3..].Reverse().ToArray()) : null);
-            store.Save(new AppSettings { DeviceName = "Test", FixedPin = "4321", PinEnabled = true, Volume = 0.4 });
-            var raw = File.ReadAllText(file);
-            Assert.DoesNotContain("4321", raw);
+            var store = new SettingsStore(file);
+            store.Save(new AppSettings { DeviceName = "Test", Volume = 0.4 });
             var loaded = store.Load();
             Assert.Equal("Test", loaded.DeviceName);
-            Assert.Equal("4321", loaded.FixedPin);
             Assert.Equal(0.4, loaded.Volume, 3);
             Assert.False(File.Exists(file + ".tmp"));
         }

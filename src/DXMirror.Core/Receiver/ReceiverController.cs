@@ -185,7 +185,6 @@ public sealed class ReceiverController : IAsyncDisposable
 
         var paths = new ReceiverPaths(
             KeyFile: ChildPath(Path.Combine(_env.DataDirectory, "uxplay-key.pem")),
-            PinRegisterFile: ChildPath(Path.Combine(_env.DataDirectory, "uxplay-register.txt")),
             StartupFile: Path.Combine(_env.DataDirectory, "uxplay.rc"));
         var lines = UxPlayStartupFile.BuildOptionLines(request.Settings, paths, _caps);
         await File.WriteAllTextAsync(paths.StartupFile, UxPlayStartupFile.BuildFileContent(lines), new System.Text.UTF8Encoding(false)).ConfigureAwait(false);
@@ -276,7 +275,6 @@ public sealed class ReceiverController : IAsyncDisposable
             case "started": _log.Info(Src, "Receiver ready, AirPlay services advertised via mDNS."); break;
             case "client_request": _log.Info(Src, $"Incoming connection from \"{after.ClientName}\" ({after.ClientModel})."); break;
             case "client_denied": _log.Warn(Src, "Connection denied."); break;
-            case "pin": _log.Info(Src, "PIN requested – shown in DXMirror window."); break;
             case "conn_reset": _log.Warn(Src, $"Connection reset (reason {ev.Get("reason")})."); break;
             case "conn_close" when after.State == ReceiverState.Ready: _log.Info(Src, "Client disconnected."); break;
             case "video_size" when before.VideoWidth != after.VideoWidth || before.VideoHeight != after.VideoHeight:
@@ -305,7 +303,7 @@ public sealed class ReceiverController : IAsyncDisposable
         _log.Error(Src, $"Receiver exited unexpectedly (code {code?.ToString() ?? "?"}, uptime {uptime:hh\\:mm\\:ss}). {detail}");
 
         var req = _lastRequest;
-        if (req is null || !req.Settings.AutoReconnect || reason is "port_in_use" or "receiver_missing")
+        if (req is null || !req.Settings.AutoReconnect || reason is "port_in_use" or "receiver_missing" or "invalid_option")
         {
             Publish(_session.SetState(ReceiverState.Faulted, reason));
             return;
@@ -344,6 +342,9 @@ public sealed class ReceiverController : IAsyncDisposable
 
     internal static string ClassifyFailure(string stderr)
     {
+        // a rejected option fails identically on every start: restarting is pointless
+        if (stderr.Contains("unknown option", StringComparison.OrdinalIgnoreCase)
+            || stderr.Contains("invalid \"-", StringComparison.Ordinal)) return "invalid_option";
         if (stderr.Contains("5353", StringComparison.Ordinal)) return "mdns_port_blocked";
         if (stderr.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
             || stderr.Contains("Error initializing raop", StringComparison.Ordinal)) return "port_in_use";

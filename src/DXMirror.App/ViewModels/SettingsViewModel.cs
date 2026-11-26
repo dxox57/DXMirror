@@ -51,7 +51,7 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     /// <summary>The settings being edited (bound directly from XAML).</summary>
-    public AppSettings Edit { get => _edit; private set { _edit = value; OnPropertyChanged(); OnPropertyChanged(nameof(PinText)); OnPropertyChanged(nameof(RecordingFolderText)); OnPropertyChanged(nameof(AdapterSelection)); OnPropertyChanged(nameof(AudioDeviceSelection)); } }
+    public AppSettings Edit { get => _edit; private set { _edit = value; OnPropertyChanged(); OnPropertyChanged(nameof(RecordingFolderText)); OnPropertyChanged(nameof(AdapterSelection)); OnPropertyChanged(nameof(AudioDeviceSelection)); } }
 
     public ICommand SaveCommand { get; }
     public ICommand RevertCommand { get; }
@@ -192,25 +192,12 @@ public sealed class SettingsViewModel : ObservableObject
         set { if (value is not null && int.TryParse(value, out var f)) { _edit.MaxFps = f; OnPropertyChanged(); } }
     }
 
-    public string PinText
-    {
-        get => _edit.FixedPin ?? "";
-        set { _edit.FixedPin = string.IsNullOrWhiteSpace(value) ? null : value.Trim(); OnPropertyChanged(); OnPropertyChanged(nameof(PinError)); }
-    }
-
-    public string PinError => string.IsNullOrEmpty(_edit.FixedPin) || PinRules.IsValid(_edit.FixedPin) ? "" : Loc.Get("Settings.PinInvalid");
-
     public string AppVersion => AppPaths.Version;
     public string DataFolder => AppPaths.DataDirectory;
 
     // ---------------------------------------------------------------- actions
     private async Task SaveAsync()
     {
-        if (PinError.Length > 0)
-        {
-            SaveMessage = PinError;
-            return;
-        }
         var updated = _edit.Clone().Normalize();
         var old = _host.Settings;
 

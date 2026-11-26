@@ -126,16 +126,17 @@ public class AppLogAndReportTests
     }
 
     [Fact]
-    public async Task Diagnostic_report_contains_expected_entries_without_pin()
+    public async Task Diagnostic_report_contains_expected_entries_and_redacts_secrets()
     {
         var dir = Directory.CreateTempSubdirectory();
         try
         {
             var log = new AppLog(Path.Combine(dir.FullName, "logs"));
             log.Info("Test", "something happened");
+            log.Info("Test", "client entered pin 2468");
             await Task.Delay(200);
             var zip = Path.Combine(dir.FullName, "report.zip");
-            DiagnosticsReport.Write(zip, new AppSettings { FixedPin = "2468", PinEnabled = true }, log,
+            DiagnosticsReport.Write(zip, new AppSettings(), log,
                 [new NetworkAdapterInfo("id", "WLAN", "Intel", AdapterKind.WiFi, true, true, ["192.168.1.2"], [], 0)],
                 new Dictionary<string, string> { ["Extra:"] = "value" });
             await log.DisposeAsync();
@@ -365,6 +366,8 @@ public class ReceiverControllerTests
     [InlineData("Error initializing raop!", "port_in_use")]
     [InlineData("no element \"d3d11videosink\"", "gstreamer_plugin_missing")]
     [InlineData("segmentation fault", "receiver_crashed")]
+    [InlineData("unknown option -pin1234, stopping", "invalid_option")]
+    [InlineData("invalid \"-pin 0\"; -pin nnnn", "invalid_option")]
     public void Failure_classification(string stderr, string expected) =>
         Assert.Equal(expected, ReceiverController.ClassifyFailure(stderr));
 }

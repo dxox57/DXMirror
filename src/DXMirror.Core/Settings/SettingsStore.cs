@@ -22,35 +22,14 @@ public sealed class SettingsStore
     private readonly object _gate = new();
     public string FilePath { get; }
 
-    private readonly Func<string, string>? _protect;
-    private readonly Func<string, string?>? _unprotect;
-    private const string ProtectedPrefix = "protected:";
-
-    /// <param name="protect">Optional encryption for secret values (the fixed PIN), e.g. Windows DPAPI.</param>
-    /// <param name="unprotect">Inverse of <paramref name="protect"/>; returns null if the value cannot be decrypted.</param>
-    public SettingsStore(string filePath, Func<string, string>? protect = null, Func<string, string?>? unprotect = null)
+    public SettingsStore(string filePath)
     {
         FilePath = filePath;
-        _protect = protect;
-        _unprotect = unprotect;
     }
 
-    private AppSettings AfterLoad(AppSettings s)
-    {
-        if (s.FixedPin is { } pin && pin.StartsWith(ProtectedPrefix, StringComparison.Ordinal))
-        {
-            s.FixedPin = _unprotect?.Invoke(pin[ProtectedPrefix.Length..]);
-        }
-        return s.Normalize();
-    }
+    private static AppSettings AfterLoad(AppSettings s) => s.Normalize();
 
-    private AppSettings BeforeSave(AppSettings s)
-    {
-        var copy = s.Clone().Normalize();
-        if (_protect is not null && !string.IsNullOrEmpty(copy.FixedPin))
-            copy.FixedPin = ProtectedPrefix + _protect(copy.FixedPin);
-        return copy;
-    }
+    private static AppSettings BeforeSave(AppSettings s) => s.Clone().Normalize();
 
     public AppSettings Load()
     {

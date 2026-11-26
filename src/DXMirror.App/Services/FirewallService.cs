@@ -22,15 +22,34 @@ internal static class FirewallService
     public const string RuleNameTcp = "DXMirror Receiver (TCP-In)";
     public const string RuleNameUdp = "DXMirror Receiver (UDP-In)";
 
-    public static async Task<FirewallStatus> GetStatusAsync()
+    /// <summary>
+    /// Both rules must exist and point to <paramref name="receiverExe"/>; rules left over from an
+    /// installation in another folder (e.g. the former "Program Files" install) count as missing.
+    /// Reading rules needs no administrator rights.
+    /// </summary>
+    public static async Task<FirewallStatus> GetStatusAsync(string receiverExe)
     {
         try
         {
-            var tcp = await RunNetshAsync($"advfirewall firewall show rule name=\"{RuleNameTcp}\"").ConfigureAwait(false);
-            var udp = await RunNetshAsync($"advfirewall firewall show rule name=\"{RuleNameUdp}\"").ConfigureAwait(false);
-            return tcp == 0 && udp == 0 ? FirewallStatus.RulesPresent : FirewallStatus.RulesMissing;
+            var tcp = await RunNetshAsync($"advfirewall firewall show rule name=\"{RuleNameTcp}\" verbose").ConfigureAwait(false);
+            var udp = await RunNetshAsync($"advfirewall firewall show rule name=\"{RuleNameUdp}\" verbose").ConfigureAwait(false);
+            var tail = PathTail(receiverExe);
+            bool ok(int code, string output) => code == 0 && output.Contains(tail, StringComparison.OrdinalIgnoreCase);
+            return ok(tcp.Code, tcp.Output) && ok(udp.Code, udp.Output) ? FirewallStatus.RulesPresent : FirewallStatus.RulesMissing;
         }
         catch (Win32Exception) { return FirewallStatus.Unknown; }
+    }
+
+    /// <summary>
+    /// Part of the path that is safe to compare against netsh output: netsh prints in the console
+    /// code page, so the user-name part (which may contain umlauts) is left out.
+    /// </summary>
+    internal static string PathTail(string exe)
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (profile.Length > 0 && exe.StartsWith(profile, StringComparison.OrdinalIgnoreCase))
+            return exe[profile.Length..];
+        return exe;
     }
 
     /// <summary>Creates (or re-creates) the rules for <paramref name="receiverExe"/>. Shows a UAC prompt.</summary>
@@ -78,7 +97,7 @@ internal static class FirewallService
         }
     }
 
-    private static async Task<int> RunNetshAsync(string args)
+    private static async Task<(int Code, string Output)> RunNetshAsync(string args)
     {
         var psi = new ProcessStartInfo("netsh.exe", args)
         {
@@ -88,9 +107,9 @@ internal static class FirewallService
             RedirectStandardError = true,
         };
         using var p = Process.Start(psi)!;
-        _ = p.StandardOutput.ReadToEndAsync();
+        var stdout = p.StandardOutput.ReadToEndAsync();
         _ = p.StandardError.ReadToEndAsync();
         await p.WaitForExitAsync().ConfigureAwait(false);
-        return p.ExitCode;
+        return (p.ExitCode, await stdout.ConfigureAwait(false));
     }
 }

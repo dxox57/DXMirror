@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using DXMirror.App.Platform;
 using DXMirror.App.Infrastructure;
 using DXMirror.App.Services;
 using DXMirror.App.ViewModels;
@@ -16,6 +18,10 @@ public partial class MainWindow : Window
     private WindowState _restoreState;
     private WindowStyle _restoreStyle;
     private ResizeMode _restoreResize;
+    private HwndSource? _source;
+    private bool _hotkeysRegistered;
+    private const int HotkeyEscape = 0xD01;
+    private const int HotkeyF11 = 0xD02;
 
     public event Action? CloseRequested;
 
@@ -25,7 +31,14 @@ public partial class MainWindow : Window
         _host = host;
         InitializeComponent();
         DataContext = vm;
-        SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
+        SourceInitialized += (_, _) =>
+        {
+            ThemeManager.ApplyTitleBar(this);
+            _source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            _source?.AddHook(WndProc);
+        };
+        Activated += (_, _) => { if (_fullscreen) SetFullscreenHotkeys(true); };
+        Deactivated += OnDeactivated;
         vm.FullscreenToggleRequested += ToggleFullscreen;
         vm.PropertyChanged += OnVmPropertyChanged;
         StateChanged += OnWindowStateChanged;
@@ -85,10 +98,13 @@ public partial class MainWindow : Window
             NavPane.Visibility = Visibility.Collapsed;
             DashboardPage.SetFullscreen(true);
             _fullscreen = true;
+            Activate();
+            SetFullscreenHotkeys(true);
         }
         else
         {
             _fullscreen = false;
+            SetFullscreenHotkeys(false);
             DashboardPage.SetFullscreen(false);
             NavPane.Visibility = Visibility.Visible;
             NavColumn.Width = new GridLength(220);
@@ -96,6 +112,48 @@ public partial class MainWindow : Window
             ResizeMode = _restoreResize;
             WindowState = _restoreState == WindowState.Minimized ? WindowState.Normal : _restoreState;
         }
+    }
+
+    /// <summary>
+    /// Esc and F11 as system hotkeys while in full screen: they work even if another window (e.g. the
+    /// receiver's video window) has the keyboard focus. Only registered while DXMirror is in full screen
+    /// and in front, so other programs keep their Esc/F11.
+    /// </summary>
+    private void SetFullscreenHotkeys(bool on)
+    {
+        var hwnd = _source?.Handle ?? 0;
+        if (hwnd == 0 || on == _hotkeysRegistered) return;
+        if (on)
+        {
+            NativeMethods.RegisterHotKey(hwnd, HotkeyEscape, NativeMethods.MOD_NOREPEAT, NativeMethods.VK_ESCAPE);
+            NativeMethods.RegisterHotKey(hwnd, HotkeyF11, NativeMethods.MOD_NOREPEAT, NativeMethods.VK_F11);
+        }
+        else
+        {
+            NativeMethods.UnregisterHotKey(hwnd, HotkeyEscape);
+            NativeMethods.UnregisterHotKey(hwnd, HotkeyF11);
+        }
+        _hotkeysRegistered = on;
+    }
+
+    private void OnDeactivated(object? sender, EventArgs e)
+    {
+        if (!_fullscreen) return;
+        // keep the hotkeys while the video window is in front; release them for any other program
+        var fg = NativeMethods.GetForegroundWindow();
+        var video = DashboardPage.VideoWindowHandle;
+        if (fg != 0 && fg == video) return;
+        SetFullscreenHotkeys(false);
+    }
+
+    private nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
+    {
+        if (msg == NativeMethods.WM_HOTKEY && (wParam == HotkeyEscape || wParam == HotkeyF11))
+        {
+            if (_fullscreen) ToggleFullscreen();
+            handled = true;
+        }
+        return 0;
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -127,6 +185,7 @@ public partial class MainWindow : Window
 
     public void CloseForExit()
     {
+        SetFullscreenHotkeys(false);
         _allowClose = true;
         Close();
     }

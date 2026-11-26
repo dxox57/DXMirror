@@ -1,4 +1,4 @@
-﻿DXMirror 0.2.0 – AirPlay-Empfänger für Windows
+﻿DXMirror 0.3.1 – AirPlay-Empfänger für Windows
 ==============================================
 
 DEUTSCH
@@ -12,13 +12,15 @@ Voraussetzungen
   Download-Knopf. Download: https://support.apple.com/de-de/106380
 
 Installation
-1. DXMirror-Setup-0.2.0-x64.exe starten.
+1. DXMirror-Setup-0.3.1-x64.exe starten.
 2. Erscheint „Der Computer wurde durch Windows geschützt“ (SmartScreen): auf „Weitere
    Informationen“ und dann „Trotzdem ausführen“ klicken. Das kommt, weil das Programm nicht
    digital signiert ist.
-3. Sprache wählen (Deutsch/English) und die Windows-Abfrage nach Administratorrechten mit „Ja“
-   bestätigen (nötig für den Programmordner und die Firewall-Regeln).
-4. Den Haken bei „Windows-Firewall-Regeln anlegen“ aktiviert lassen.
+3. Sprache wählen (Deutsch/English). DXMirror wird nur für dich installiert, dafür sind keine
+   Administratorrechte nötig.
+4. Den Haken bei „Windows-Firewall-Regeln anlegen“ aktiviert lassen. Gegen Ende fragt Windows einmal
+   nach Administratorrechten für den „Windows-Befehlsprozessor“ – mit „Ja“ bestätigen. Ohne diese
+   Regeln kann sich das iPhone nicht verbinden; DXMirror bietet sie sonst später erneut an.
 
 Benutzung
 - DXMirror starten. Auf dem iPhone: Kontrollzentrum → Bildschirmsynchronisierung →
@@ -41,12 +43,14 @@ Requirements
   Download: https://support.apple.com/en-us/106380
 
 Installation
-1. Run DXMirror-Setup-0.2.0-x64.exe.
+1. Run DXMirror-Setup-0.3.1-x64.exe.
 2. If "Windows protected your PC" (SmartScreen) appears, click "More info" and then "Run anyway".
    This appears because the program is not digitally signed.
-3. Choose the language (Deutsch/English) and confirm the Windows administrator prompt with "Yes"
-   (needed for the program folder and the firewall rules).
-4. Keep "Create Windows Firewall rules" checked.
+3. Choose the language (Deutsch/English). DXMirror is installed for your user only; no
+   administrator rights are needed for that.
+4. Keep "Create Windows Firewall rules" checked. Near the end Windows asks once for administrator
+   rights for "Windows Command Processor" – confirm with "Yes". Without these rules the iPhone
+   cannot connect; otherwise DXMirror offers to create them later.
 
 Usage
 - Start DXMirror. On the iPhone: Control Center → Screen Mirroring → "DXMirror – <PC name>".

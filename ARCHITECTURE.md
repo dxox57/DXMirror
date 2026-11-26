@@ -12,7 +12,9 @@ Das Projektziel verlangt echte iPhone-Bildschirmsynchronisierung. Die Machbarkei
 | Eigenentwicklung | – | – | – | Protokoll undokumentiert, FairPlay-Handshake nötig: unverhältnismäßig |
 
 UxPlay erfüllt als einziges gepflegtes Projekt alle Kernanforderungen und läuft nativ unter Windows.
-Seit 1.74 bringt es einen eigenen mDNS-Responder mit, Apples Bonjour-Dienst ist nicht mehr nötig.
+Für die Erkennung durch das iPhone nutzt DXMirror Apples Bonjour-Dienst (UxPlay mit `USE_DNS_SD`).
+Der eingebaute mDNS-Responder von UxPlay 1.74 wurde getestet, bekam unter Windows aber keinen
+UDP-5353-Socket (z. B. wenn TeamViewer den Port belegt) und ist daher nicht im Einsatz.
 Konsequenz: DXMirror ist GPL-3.0.
 
 DXMirror bindet UxPlay **als eigenen Prozess** ein, nicht als Bibliothek:
@@ -30,38 +32,36 @@ DXMirror bindet UxPlay **als eigenen Prozess** ein, nicht als Bibliothek:
 │ Desktop UI            Views/, ViewModels/, Themes/, Localization/, Services/TrayIcon     │
 │   Dashboard · Einstellungen · Diagnose · Tray · Vollbild · Benachrichtigungen            │
 │ App-Dienste           Services/AppHost (Komposition), Firewall, Autostart, SingleInstance │
-│ Plattform             Platform/AudioEndpoints (WASAPI-Sessions), ChildProcessJob, DPAPI   │
-│ Video-Host            Controls/VideoHost (HwndHost, natives Kindfenster)                  │
+│ Plattform             Platform/AudioEndpoints, ChildProcessJob, NetworkConflicts         │
+│ Video-Host            Controls/VideoHost (Receiver-Fenster als rahmenloses owned window)  │
 ├──────────────────────────── DXMirror.Core (.NET 10, plattformneutral) ──────────────────┤
 │ Receiver Core         ReceiverController (Prozess, Neustart, Events) · ReceiverSession    │
 │                       (Zustandsautomat) · UxPlayStartupFile (Optionen) · Capabilities      │
 │ Network Manager       NetworkAdapterService (Erkennung, Klassifizierung, Auswahl, Events) │
 │ Logging/Diagnostics   AppLog (asynchron, rotierend, geschwärzt) · ResourceMonitor ·        │
 │                       DiagnosticsReport (ZIP) · LogRedactor                                │
-│ Settings              AppSettings (validiert) · SettingsStore (atomar, PIN per DPAPI)     │
+│ Settings              AppSettings (validiert) · SettingsStore (atomar)                    │
 └───────────────┬─────────────────────────────────────────────▲──────────────────────────┘
-   -rc uxplay.rc│ ENV: DXMIRROR_EVENTS/CONTROL/HWND/MDNS_IPV4  │ stdout "@@DXM <event> k=v"
-   stdin "quit" ▼ GST_PLUGIN_* (nur gebündelte Plugins)        │
+   -rc uxplay.rc│ ENV: DXMIRROR_EVENTS/CONTROL                   │ stdout "@@DXM <event> k=v"
+   stdin: quit, ▼ volume x, record_start/stop; GST_PLUGIN_* (nur gebündelte Plugins)
 ┌──────────────────── receiver\bin\uxplay.exe (UxPlay 1.74 + DXMirror-Patch) ─────────────┐
 │ AirPlay-Protokoll (RTSP/HTTP, Pairing, FairPlay-Setup, RTP-Mirror, RAOP-Audio, NTP)      │
-│ mDNS-Responder (_airplay._tcp, _raop._tcp)                                               │
-│ GStreamer: appsrc → h264parse → decodebin (d3d11h264dec | avdec_h264) → d3d11videosink ──┼─► HWND im DXMirror-Fenster
+│ Ankündigung _airplay._tcp/_raop._tcp über Apple Bonjour (dnssd.dll, zur Laufzeit geladen) │
+│ GStreamer: appsrc → h264parse → decodebin (d3d11h264dec | avdec_h264) → d3d11videosink ──┼─► eigenes Fenster, über DXMirror gelegt
+│            Aufnahme: mux_renderer (H.264 + AAC-LC) → mp4mux → filesink                    │
 │            appsrc → avdec_aac/avdec_alac → audioconvert → audioresample → volume → wasapisink ─► Windows-Audio
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Schnittstelle DXMirror ↔ UxPlay
 
-Der Patch `third_party/uxplay/dxmirror-uxplay.patch` (≈90 Zeilen, nur aktiv wenn die Umgebungsvariablen
-gesetzt sind) ergänzt UxPlay um:
+Der Patch `third_party/uxplay/dxmirror-uxplay.patch` (nur aktiv, wenn die Umgebungsvariablen gesetzt
+sind) ergänzt UxPlay um:
 
 | Mechanismus | Zweck |
 |---|---|
-| `DXMIRROR_EVENTS=1` → Zeilen `@@DXM …` auf stdout | `started`, `client_request name= model=`, `client_denied`, `pin code=`, `conn_open/close count=`, `conn_reset reason=`, `video_size codec= w= h=`, `audio_format ct= screen= media=`, `stats fps= kbps= missed=` (1×/s), `stopping` |
-| `DXMIRROR_CONTROL=1` → stdin | Zeile `quit` oder geschlossenes stdin ⇒ gleicher Pfad wie Strg+C (sauberes Beenden) |
-| `DXMIRROR_HWND=<handle>` | ruft das in UxPlay vorhandene `video_renderer_set_window_handle()` auf ⇒ GStreamer rendert per `GstVideoOverlay` in das DXMirror-Kindfenster |
-| `DXMIRROR_MDNS_IPV4=<ip>` | mDNS-Ankündigung auf dem vom Nutzer gewählten Adapter |
-| PIN | wird bei aktivem DXMirror nicht als ASCII-Grafik in die Konsole geschrieben (Logs bleiben frei von Auth-Daten) |
+| `DXMIRROR_EVENTS=1` → Zeilen `@@DXM …` auf stdout | `started`, `client_request name= model=`, `client_denied`, `conn_open/close count=`, `conn_reset reason=`, `video_size codec= w= h=`, `audio_format ct= screen= media=`, `stats fps= kbps= missed=` (1×/s), `client_volume`, `recording state=armed/waiting/started/stopped/error`, `stopping` |
+| `DXMIRROR_CONTROL=1` → stdin | `quit` (oder geschlossenes stdin) ⇒ sauberes Beenden wie Strg+C; `volume x` ⇒ GStreamer-Lautstärke (× iPhone-Lautstärke); `record_start <pfad>` / `record_stop` ⇒ MP4-Aufnahme (Start mitten in der Sitzung über GOP-Puffer, AAC-ELD wird zu AAC-LC umgewandelt) |
 
 Alle Optionen werden über eine UTF-8-Startdatei (`-rc`) übergeben, weil Windows Kommandozeilenargumente an
 MinGW-Programme in der ANSI-Codepage übergibt und UxPlay Nicht-UTF-8-Argumente ablehnt (Gerätenamen mit
@@ -71,13 +71,17 @@ Vor jedem Start liest DXMirror `uxplay -h` und verwendet nur Optionen, die die B
 ## Datenfluss einer Spiegelung
 
 1. UxPlay kündigt `_airplay._tcp`/`_raop._tcp` per mDNS an → iPhone listet „DXMirror – PC“.
-2. iPhone verbindet sich (RTSP/HTTP), Pairing (optional PIN), FairPlay-Setup → `client_request`, `conn_open`.
-3. Video: H.264-NAL-Einheiten via TCP-RTP → `video_size` → GStreamer-Pipeline → Direct3D-Präsentation im HWND.
-4. Audio: AAC-ELD via UDP-RTP → `audio_format ct=8` → WASAPI. Synchronisation über NTP-Zeitstempel des
-   iPhones (UxPlay `-vsync`, Feinjustierung per Einstellung „Ton-Verzögerung“).
+2. iPhone verbindet sich (RTSP/HTTP), Pairing, FairPlay-Setup → `client_request`, `conn_open`.
+3. Video: H.264-NAL-Einheiten via TCP-RTP → `video_size` → GStreamer-Pipeline → Direct3D-Fenster des
+   Receivers. DXMirror sucht dieses Fenster, macht es rahmenlos und legt es als „owned window“ passgenau über
+   die Videofläche (Abgleich bei Verschieben/Größenänderung und alle 150 ms).
+4. Audio: AAC-ELD via UDP-RTP → `audio_format ct=8` → WASAPI. Standard: ohne Zeitstempel-Sync, 100 ms Puffer
+   (ca. 0,5 s Gesamtverzögerung); `-vsync` optional per Einstellung.
 5. Heartbeats des iPhones jede Sekunde; bleiben sie `-reset n` Sekunden aus → `conn_reset reason=1`.
-6. DXMirror-Lautstärke: `ISimpleAudioVolume` der WASAPI-Session des Receiver-Prozesses (Systemlautstärke
-   und andere Programme bleiben unberührt).
+6. DXMirror-Lautstärke: stdin-Befehl `volume x` an das GStreamer-`volume`-Element im Receiver
+   (Kurve slider², Systemlautstärke und andere Programme bleiben unberührt).
+7. Blockier-Warnung: DXMirror prüft im Leerlauf alle 20 s, ob Bonjour installiert ist/läuft und welche
+   Fremdprozesse UDP 5353 bzw. TCP 7000/7001/7100 belegen (GetExtendedUdpTable/TcpTable).
 
 ## Threads und Robustheit
 
@@ -98,11 +102,12 @@ Vor jedem Start liest DXMirror `uxplay -h` und verwendet nur Optionen, die die B
 
 ## Daten auf dem PC
 
-`%LOCALAPPDATA%\DXMirror\`: `settings.json` (fester PIN per DPAPI verschlüsselt), `logs\`,
+`%LOCALAPPDATA%\DXMirror\`: `settings.json`, `logs\`,
 `receiver\uxplay.rc` (generiert), `receiver\uxplay-key.pem` (Geräteschlüssel, damit das iPhone den PC
-wiedererkennt), `receiver\uxplay-register.txt` (PIN-registrierte iPhones), `cache\gstreamer-registry.bin`.
+wiedererkennt), `cache\gstreamer-registry.bin`.
+Programm: `%LOCALAPPDATA%\Programs\DXMirror\` (Installation pro Benutzer, keine Administratorrechte).
 
 ## Technologien
 
-.NET 10 (LTS) / C# / WPF, Windows Core Audio (COM), Win32 (Job-Objekte, DPAPI, DWM), UxPlay 1.74 (C/C++),
+.NET 10 (LTS) / C# / WPF, Windows Core Audio (COM), Win32 (Job-Objekte, DWM), UxPlay 1.74 (C/C++),
 GStreamer 1.x aus MSYS2 UCRT64 (d3d11/d3d12, wasapi, libav/FFmpeg), OpenSSL 3, libplist, Inno Setup 6.

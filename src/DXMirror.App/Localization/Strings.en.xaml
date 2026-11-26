@@ -10,6 +10,7 @@
     <sys:String x:Key="S.Action.DownloadBonjour" xml:space="preserve">Download Bonjour</sys:String>
     <sys:String x:Key="S.Action.ExportReport" xml:space="preserve">Export diagnostic report</sys:String>
     <sys:String x:Key="S.Action.Firewall" xml:space="preserve">Set up firewall rules…</sys:String>
+    <sys:String x:Key="S.Action.FirewallShort" xml:space="preserve">Set up firewall</sys:String>
     <sys:String x:Key="S.Action.Fullscreen" xml:space="preserve">Full screen</sys:String>
     <sys:String x:Key="S.Action.Mute" xml:space="preserve">Mute</sys:String>
     <sys:String x:Key="S.Action.OpenFolder" xml:space="preserve">Open folder</sys:String>
@@ -41,6 +42,7 @@
     <sys:String x:Key="S.Diag.Unknown" xml:space="preserve">unknown</sys:String>
     <sys:String x:Key="S.Error.connection_lost" xml:space="preserve">Lost connection to the iPhone – ready for a new connection.</sys:String>
     <sys:String x:Key="S.Error.gstreamer_plugin_missing" xml:space="preserve">An audio/video component is missing. Please reinstall DXMirror.</sys:String>
+    <sys:String x:Key="S.Error.invalid_option" xml:space="preserve">The receiver rejected a setting. Please check the settings or reset them to defaults.</sys:String>
     <sys:String x:Key="S.Error.mdns_port_blocked" xml:space="preserve">mDNS (UDP 5353) is blocked. Set up the firewall rules (Diagnostics).</sys:String>
     <sys:String x:Key="S.Error.port_in_use" xml:space="preserve">AirPlay ports are in use – is another AirPlay receiver running?</sys:String>
     <sys:String x:Key="S.Error.receiver_crashed" xml:space="preserve">The receiver stopped unexpectedly.</sys:String>
@@ -59,7 +61,6 @@
     <sys:String x:Key="S.Field.DeviceName" xml:space="preserve">Device name</sys:String>
     <sys:String x:Key="S.Field.Duration" xml:space="preserve">Duration</sys:String>
     <sys:String x:Key="S.Field.Firewall" xml:space="preserve">Firewall</sys:String>
-    <sys:String x:Key="S.Field.FixedPin" xml:space="preserve">Fixed PIN (optional)</sys:String>
     <sys:String x:Key="S.Field.Heartbeats" xml:space="preserve">Missed heartbeats</sys:String>
     <sys:String x:Key="S.Field.Language" xml:space="preserve">Language</sys:String>
     <sys:String x:Key="S.Field.LogLevel" xml:space="preserve">Log level</sys:String>
@@ -88,14 +89,12 @@
     <sys:String x:Key="S.Hint.Debug" xml:space="preserve">Writes detailed logs (larger log files). Authentication data is never logged.</sys:String>
     <sys:String x:Key="S.Hint.DeviceName" xml:space="preserve">This is how the PC appears on the iPhone under “Screen Mirroring”.</sys:String>
     <sys:String x:Key="S.Hint.NetworkDiag" xml:space="preserve">If DXMirror is not found: the network profile must be “Private”, firewall rules must exist, guest Wi-Fi with client isolation blocks AirPlay.</sys:String>
-    <sys:String x:Key="S.Hint.Pin" xml:space="preserve">When connecting, DXMirror shows a 4-digit code that you enter on the iPhone. Without a fixed PIN a random code is generated each time.</sys:String>
     <sys:String x:Key="S.Hint.Quality" xml:space="preserve">The iPhone adapts bitrate and frame rate to the network itself; DXMirror only sets the upper limits. On a static screen iOS sends few new frames – that is normal.</sys:String>
     <sys:String x:Key="S.Hint.RecordButton" xml:space="preserve">Record the iPhone screen and audio as MP4</sys:String>
     <sys:String x:Key="S.Hint.RecordingFolder" xml:space="preserve">Recordings are saved as MP4 (video and audio). Default: Videos\DXMirror. Rotating the iPhone starts a new file.</sys:String>
     <sys:String x:Key="S.Hint.VolumeOnDashboard" xml:space="preserve">Volume and mute are on the dashboard.</sys:String>
     <sys:String x:Key="S.Idle.AudioOnly" xml:space="preserve">Playing AirPlay audio.</sys:String>
     <sys:String x:Key="S.Idle.Connecting" xml:space="preserve">iPhone is connecting…</sys:String>
-    <sys:String x:Key="S.Idle.EnterPin" xml:space="preserve">Enter the code shown here on your iPhone.</sys:String>
     <sys:String x:Key="S.Idle.Faulted" xml:space="preserve">The receiver could not be started. See Diagnostics for details.</sys:String>
     <sys:String x:Key="S.Idle.Ready" xml:space="preserve">DXMirror is ready. Open Control Center on your iPhone and choose Screen Mirroring.</sys:String>
     <sys:String x:Key="S.Idle.Starting" xml:space="preserve">Starting the AirPlay receiver…</sys:String>
@@ -146,14 +145,11 @@
     <sys:String x:Key="S.Opt.NewClientTakesOver" xml:space="preserve">A new iPhone takes over the current session</sys:String>
     <sys:String x:Key="S.Opt.Notifications" xml:space="preserve">Show notifications</sys:String>
     <sys:String x:Key="S.Opt.NotifyOnConnect" xml:space="preserve">Notify on new connection</sys:String>
-    <sys:String x:Key="S.Opt.Pin" xml:space="preserve">Protect connections with a PIN</sys:String>
-    <sys:String x:Key="S.Opt.RememberPin" xml:space="preserve">Remember known iPhones (PIN only the first time)</sys:String>
     <sys:String x:Key="S.Opt.ScaleFit" xml:space="preserve">Keep aspect ratio</sys:String>
     <sys:String x:Key="S.Opt.ScaleStretch" xml:space="preserve">Fill window (stretch)</sys:String>
     <sys:String x:Key="S.Opt.StartReceiverOnLaunch" xml:space="preserve">Activate receiver when DXMirror starts</sys:String>
     <sys:String x:Key="S.Opt.StartWithWindows" xml:space="preserve">Start with Windows</sys:String>
     <sys:String x:Key="S.Opt.System" xml:space="preserve">Use Windows setting</sys:String>
-    <sys:String x:Key="S.Pin.Title" xml:space="preserve">Enter this code on your iPhone</sys:String>
     <sys:String x:Key="S.Quality.Good" xml:space="preserve">Good</sys:String>
     <sys:String x:Key="S.Quality.Poor" xml:space="preserve">Unstable</sys:String>
     <sys:String x:Key="S.Quality.Static" xml:space="preserve">Good (screen unchanged)</sys:String>
@@ -166,7 +162,6 @@
     <sys:String x:Key="S.Rec.Starting" xml:space="preserve">Starting recording…</sys:String>
     <sys:String x:Key="S.Rec.Waiting" xml:space="preserve">Recording waits for a key frame – briefly rotating the iPhone helps</sys:String>
     <sys:String x:Key="S.Settings.DefaultsLoaded" xml:space="preserve">Defaults loaded – save to apply.</sys:String>
-    <sys:String x:Key="S.Settings.PinInvalid" xml:space="preserve">The PIN must be exactly 4 digits.</sys:String>
     <sys:String x:Key="S.Settings.Saved" xml:space="preserve">Saved.</sys:String>
     <sys:String x:Key="S.State.Connecting" xml:space="preserve">Connecting</sys:String>
     <sys:String x:Key="S.State.Faulted" xml:space="preserve">Error</sys:String>
@@ -203,5 +198,6 @@
     <sys:String x:Key="S.Warn.BonjourMissing" xml:space="preserve">Bonjour is not installed. Without Bonjour the iPhone cannot find this PC. Install Bonjour (free from Apple) and restart DXMirror.</sys:String>
     <sys:String x:Key="S.Warn.BonjourNotOnAdapter" xml:space="preserve">Bonjour is not listening on network {0}. Restart the Bonjour service or the PC.</sys:String>
     <sys:String x:Key="S.Warn.BonjourStopped" xml:space="preserve">The Bonjour service is not running. Start the "Bonjour Service" (services.msc) or restart the PC.</sys:String>
+    <sys:String x:Key="S.Warn.FirewallMissing" xml:space="preserve">The Windows Firewall rules for DXMirror are missing – the iPhone cannot connect. Click "Set up firewall" once and confirm the Windows prompt.</sys:String>
     <sys:String x:Key="S.Warn.OtherReceivers" xml:space="preserve">Another AirPlay program is already running: {0}. This can interfere with the connection.</sys:String>
 </ResourceDictionary>

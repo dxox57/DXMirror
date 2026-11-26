@@ -121,16 +121,6 @@ public class ReceiverSessionTests
     }
 
     [Fact]
-    public void Pin_is_shown_until_stream_starts()
-    {
-        var s = new ReceiverSession();
-        s.Apply(Ev("@@DXM started version=1.74"));
-        s.Apply(Ev("@@DXM client_request name=\"x\" model=\"y\""));
-        Assert.Equal("4711", s.Apply(Ev("@@DXM pin code=4711")).PendingPin);
-        Assert.Null(s.Apply(Ev("@@DXM video_size codec=h264 src=1x1 w=10 h=20")).PendingPin);
-    }
-
-    [Fact]
     public void Denied_client_is_cleared()
     {
         var s = new ReceiverSession();

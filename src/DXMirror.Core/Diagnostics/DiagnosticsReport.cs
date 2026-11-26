@@ -9,7 +9,7 @@ namespace DXMirror.Core.Diagnostics;
 
 /// <summary>
 /// Builds the "Diagnosebericht exportieren" ZIP: system info, network adapters, sanitised settings
-/// (no PIN), resource metrics and the rotated log files. Contains no video/audio content.
+/// resource metrics and the rotated log files. Contains no video/audio content.
 /// </summary>
 public static class DiagnosticsReport
 {
@@ -43,9 +43,7 @@ public static class DiagnosticsReport
         }
         AddText(zip, "network.txt", net.ToString());
 
-        var safe = settings.Clone();
-        safe.FixedPin = string.IsNullOrEmpty(safe.FixedPin) ? null : "[redacted]";
-        AddText(zip, "settings.json", JsonSerializer.Serialize(safe, new JsonSerializerOptions { WriteIndented = true }));
+        AddText(zip, "settings.json", JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
 
         var recent = new StringBuilder();
         foreach (var e in log.Recent()) recent.AppendLine(e.ToString());

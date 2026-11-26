@@ -77,7 +77,7 @@ if (-not $SkipInstaller) {
     $version = (Select-Xml -Path (Join-Path $root "src\DXMirror.App\DXMirror.App.csproj") -XPath "//Version").Node.InnerText
     & $iscc "/DAppVersion=$version" "/DPublishDir=$publish" "/O$artifacts\installer" (Join-Path $root "installer\DXMirror.iss")
     if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
-    Get-ChildItem (Join-Path $artifacts "installer") -Filter *.exe | ForEach-Object { Write-Host "    Installer: $($_.FullName)" }
+    Write-Host "    Installer: $(Join-Path $artifacts "installer\DXMirror-Setup-$version-x64.exe")"
 }
 
 Step "Done"

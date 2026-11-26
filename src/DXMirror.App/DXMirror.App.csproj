@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\DXMirror.ico</ApplicationIcon>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <Version>0.2.0</Version>
+    <Version>0.3.1</Version>
     <Product>DXMirror</Product>
     <Company>DXMirror</Company>
     <Description>AirPlay receiver for Windows (based on UxPlay)</Description>

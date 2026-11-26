@@ -35,7 +35,7 @@ internal sealed class AppHost : IAsyncDisposable
         Directory.CreateDirectory(AppPaths.DataDirectory);
         Directory.CreateDirectory(AppPaths.CacheDirectory);
         Log = new AppLog(AppPaths.LogDirectory);
-        Store = new SettingsStore(AppPaths.SettingsFile, NativeMethods.ProtectString, NativeMethods.UnprotectString);
+        Store = new SettingsStore(AppPaths.SettingsFile);
         Settings = Store.Load();
         if (Settings.DeviceName.StartsWith("Air" + "Bridge", StringComparison.OrdinalIgnoreCase))
         {
@@ -135,7 +135,6 @@ internal sealed class AppHost : IAsyncDisposable
 
     internal static bool ReceiverRelevantChanged(AppSettings a, AppSettings b) =>
         a.DeviceName != b.DeviceName || a.AutoSelectAdapter != b.AutoSelectAdapter || a.NetworkAdapterId != b.NetworkAdapterId
-        || a.PinEnabled != b.PinEnabled || a.FixedPin != b.FixedPin || a.RememberPinClients != b.RememberPinClients
         || a.ConnectionTimeoutSeconds != b.ConnectionTimeoutSeconds || a.NewClientTakesOver != b.NewClientTakesOver
         || a.MaxWidth != b.MaxWidth || a.MaxHeight != b.MaxHeight || a.MaxFps != b.MaxFps
         || a.HardwareAcceleration != b.HardwareAcceleration || a.VideoRenderer != b.VideoRenderer || a.Scaling != b.Scaling

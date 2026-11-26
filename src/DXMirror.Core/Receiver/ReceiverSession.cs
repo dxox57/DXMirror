@@ -50,8 +50,6 @@ public sealed record ReceiverSnapshot
     /// <summary>"AAC-ELD" (mirroring), "ALAC" or "AAC" (music streaming) when known.</summary>
     public string? AudioFormat { get; init; }
     public StreamKind Kind { get; init; }
-    /// <summary>PIN the user must type on the iPhone (shown in the UI only, never logged).</summary>
-    public string? PendingPin { get; init; }
     public int MissedHeartbeats { get; init; }
     public string? LastError { get; init; }
     public string? ReceiverVersion { get; init; }
@@ -116,10 +114,6 @@ public sealed class ReceiverSession
                 s = ClearClient(s) with { State = ReceiverState.Ready };
                 break;
 
-            case "pin":
-                s = s with { PendingPin = NonEmpty(e.Get("code")) };
-                break;
-
             case "conn_open":
                 _openConnections = e.GetInt("count") ?? _openConnections + 1;
                 if (s.State is ReceiverState.Ready) s = s with { State = ReceiverState.Connecting, ConnectedSince = _time.GetUtcNow() };
@@ -148,7 +142,6 @@ public sealed class ReceiverSession
                     VideoWidth = PositiveOrNull(e.GetInt("w")),
                     VideoHeight = PositiveOrNull(e.GetInt("h")),
                     VideoCodec = e.Get("codec"),
-                    PendingPin = null,
                     ConnectedSince = s.ConnectedSince ?? _time.GetUtcNow(),
                 };
                 break;
@@ -162,7 +155,6 @@ public sealed class ReceiverSession
                     AudioFormat = ct switch { 2 => "ALAC", 4 => "AAC", 8 => "AAC-ELD", _ => s.AudioFormat },
                     Kind = s.Kind == StreamKind.ScreenMirroring || screen ? StreamKind.ScreenMirroring : StreamKind.AudioOnly,
                     State = ReceiverState.Streaming,
-                    PendingPin = null,
                     ConnectedSince = s.ConnectedSince ?? _time.GetUtcNow(),
                 };
                 break;
@@ -212,7 +204,6 @@ public sealed class ReceiverSession
         AudioActive = false,
         AudioFormat = null,
         Kind = StreamKind.None,
-        PendingPin = null,
         MissedHeartbeats = 0,
     };
 

@@ -6,3 +6,9 @@
 *.exe
 *.msi
 *.zip
+artifacts/
+build/work/
+TestResults/
+_to_delete/
+diagnose-berichte/
+build-log.txt

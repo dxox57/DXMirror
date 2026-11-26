@@ -27,7 +27,9 @@ bzw. `powershell -ExecutionPolicy Bypass -File build\build.ps1`. Ablauf:
 2. **Tests** – `dotnet test tests\DXMirror.Core.Tests`
 3. **App** – `dotnet publish` (self-contained, win-x64, ReadyToRun) nach `artifacts\publish\`
    (inkl. `receiver\`). Dieser Ordner ist bereits eine lauffähige portable Version.
-4. **Installer** – `artifacts\installer\DXMirror-Setup-0.1.0-x64.exe`
+4. **Installer** – `artifacts\installer\DXMirror-Setup-0.3.1-x64.exe`. Installiert pro Benutzer nach
+   `%LOCALAPPDATA%\Programs\DXMirror` ohne Administratorrechte; nur die Firewall-Regeln werden über eine
+   Windows-Abfrage für `cmd /c netsh …` angelegt (`DXMirror.exe --setup-firewall`).
 
 Optionen: `-SkipReceiver` (vorhandenes `artifacts\receiver` nutzen), `-SkipTests`, `-SkipInstaller`,
 `-Msys2Root D:\msys64`.

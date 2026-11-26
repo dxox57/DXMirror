@@ -28,11 +28,6 @@ public sealed class AppSettings
     public bool AutoSelectAdapter { get; set; } = true;
     /// <summary>NetworkInterface.Id of the adapter chosen by the user (used when AutoSelectAdapter is false).</summary>
     public string? NetworkAdapterId { get; set; }
-    public bool PinEnabled { get; set; }
-    /// <summary>Optional fixed 4-digit PIN. Null/empty = UxPlay shows a random PIN on each connection.</summary>
-    public string? FixedPin { get; set; }
-    /// <summary>Remember PIN-verified iPhones so the PIN is only asked once (UxPlay -reg).</summary>
-    public bool RememberPinClients { get; set; } = true;
     public bool NotifyOnConnect { get; set; } = true;
     /// <summary>Restart the receiver automatically after a crash or a lost connection.</summary>
     public bool AutoReconnect { get; set; } = true;
@@ -101,7 +96,6 @@ public sealed class AppSettings
         Language = Language is "de" or "en" ? Language : "auto";
         Theme = Theme is "light" or "dark" ? Theme : "system";
 
-        if (!string.IsNullOrEmpty(FixedPin) && !PinRules.IsValid(FixedPin)) FixedPin = null;
         ConnectionTimeoutSeconds = Math.Clamp(ConnectionTimeoutSeconds, 0, 300);
 
         MaxWidth = Math.Clamp(MaxWidth, 320, 3840);
@@ -122,12 +116,6 @@ public sealed class AppSettings
         SchemaVersion = CurrentSchemaVersion;
         return this;
     }
-}
-
-public static class PinRules
-{
-    public static bool IsValid(string? pin) =>
-        pin is { Length: 4 } && pin.All(char.IsAsciiDigit);
 }
 
 public static class DeviceNameRules
