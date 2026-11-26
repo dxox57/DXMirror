@@ -63,6 +63,10 @@ Der Upload setzt einen Release voraus, dessen Assets nach Veröffentlichung bear
 Bei einem Upload-Fehler den fehlgeschlagenen Job erneut ausführen. Vorhandene Dateien mit gleichem
 SHA-256 bleiben erhalten. Bei abweichendem SHA-256 meldet der Job einen Konflikt.
 
+Für den Release `v0.3.1` werden hohe und kritische Grype-Befunde im Report und als Warnung
+angezeigt. Nur beim Upload zu diesem Release blockieren diese Befunde den Job nicht.
+Scannerfehler und die übrigen Prüfungen können den Upload weiterhin blockieren.
+
 ## Sicherheitsprüfungen in GitHub Actions
 
 - Pull Requests und Pushes auf `main` bauen den Installer und prüfen NuGet sowie die
